@@ -1,11 +1,29 @@
 # Kubernetes Cluster Deployment Project
 
-## KubeQuest
-
 This project focuses on designing and deploying a fully-equipped Kubernetes cluster to host and manage applications. The cluster will include essential management tools, administration components, and adhere to Kubernetes best practices. Additionally, an application currently deployed using Docker Compose will be converted and deployed using Kubernetes.
 
 ---
-
+### Structure
+```
+T-CLO-902-LYO_1/
+├── sample-app-master/                     # Laravel application source code
+│   ├── app/
+│   ├── public/
+│   ├── composer.json
+|   |── docker-compose.yml
+│   └── ...                  # All other Laravel files and folders
+├── helm/
+│   └── myapp/               # Helm chart for the application
+├── manifests/
+│   ├── ingress-nginx/       # Optional: manifests or install notes for ingress
+│   ├── monitoring/          # Manifests/notes for Prometheus and Grafana
+│   ├── logging/             # Manifests/notes for Loki
+│   └── security/            # Manifests/notes for Dex, OPA, etc.
+├── overlays/
+│   └── dev/                 # Environment-specific configuration (if used)
+└── README.md
+```
+---
 ## Objectives
 
 ### Core Goals
