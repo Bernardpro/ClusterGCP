@@ -1,0 +1,23 @@
+global:
+  enabled: true
+server:
+  ha:
+    enabled: true  # Active le mode haute disponibilité pour Vault
+    replicas: 2  
+    dataStorage:
+      existingClaim: "pvc-vault"  # Utilisation d'un PVC existant pour le stockage des données
+    config: |
+      ui = true
+      listener "tcp" {
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+        tls_disable = 1
+      }
+      storage "consul" {
+        path = "vault"
+        address = "consul-server.consul.svc.cluster.local:8500"  # Adresse du service Consul avec le port
+      }
+  volumes: []  
+  volumeMounts: []
+ui:
+  enabled: true
