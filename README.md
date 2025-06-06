@@ -6,14 +6,20 @@ This project focuses on designing and deploying a fully-equipped Kubernetes clus
 ### Structure
 ```
 T-CLO-902-LYO_1/
-├── sample-app-master/                     # Laravel application source code
+├── sample-app/                     # Laravel application source code
 │   ├── app/
 │   ├── public/
 │   ├── composer.json
 |   |── docker-compose.yml
 │   └── ...                  # All other Laravel files and folders
-├── helm/
-│   └── myapp/               # Helm chart for the application
+├── helm/sample-app/ 
+│   ├── Chart.yaml     # Helm chart for the application
+│   ├── values.yaml
+│   └── templates/
+│       ├── deployment.yaml
+│       ├── service.yaml  
+│       ├── ingress.yaml
+│       └── secret.yaml              
 ├── manifests/
 │   ├── ingress-nginx/       # Optional: manifests or install notes for ingress
 │   ├── monitoring/          # Manifests/notes for Prometheus and Grafana
