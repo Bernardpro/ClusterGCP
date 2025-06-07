@@ -1,7 +1,8 @@
 # Kubernetes Cluster Deployment Project
 
 This project focuses on designing and deploying a fully-equipped Kubernetes cluster to host and manage applications. The cluster will include essential management tools, administration components, and adhere to Kubernetes best practices. Additionally, an application currently deployed using Docker Compose will be converted and deployed using Kubernetes.
-
+---
+![Kube Quest Architecture](kubequest.png)
 ---
 ### Structure
 ```
