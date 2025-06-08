@@ -1,0 +1,10 @@
+resources:
+  - mysql/templates/networkpolicy.yaml
+  - mysql/templates/secrets.yaml
+  - mysql/templates/serviceaccount.yaml
+  - mysql/templates/primary/configmap.yaml
+  - mysql/templates/primary/pdb.yaml
+  - mysql/templates/primary/statefulset.yaml
+  - mysql/templates/primary/svc-headless.yaml
+  - mysql/templates/primary/svc.yaml
+
