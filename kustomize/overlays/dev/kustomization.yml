@@ -1,5 +1,5 @@
 helmCharts:
   - name: sample-app
     releaseName: sample-app
-    repo: file://../../../helm/sample-app
+    repo: ../../../helm/sample-app
     valuesFile: values-dev.yaml
