@@ -53,9 +53,10 @@ resource "google_container_node_pool" "nodes" {
   }
 
   autoscaling {
-    min_node_count = 0
-    max_node_count = 1
+    min_node_count = 1
+    max_node_count = 4
   }
+
 
   node_count = 1
 }

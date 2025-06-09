@@ -1,6 +1,7 @@
-helmCharts:
-  - name: sample-app
-    releaseName: sample-app
-    repo: file://../../../helm/sample-app
-    valuesFile: values-prod.yaml
-
+# helmCharts:
+#   - name: sample-app
+#     releaseName: sample-app
+#     repo: file://../../../helm/sample-app
+#     valuesFile: values-prod.yaml
+resources:
+  - ../../base
