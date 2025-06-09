@@ -24,3 +24,24 @@ gcp-stack/
 ├── outputs.tf       # The ouput of terraform
 
 ```
+
+## 3. Build the stack
+
+```
+cd gcp-stack
+terraform apply
+```
+
+## 4. Stop stack for economics usage
+
+```
+cd gcp-stack
+terraform destroy -target=google_container_node_pool.nodes
+```
+
+## 5. Restart after stop
+
+```
+cd gcp-stack
+terraform apply -target=google_container_node_pool.nodes
+```
