@@ -15,105 +15,55 @@ provider "google" {
   zone        = var.zone
 }
 
-resource "google_compute_network" "vpc" {
-  name                    = "main-vpc"
-  auto_create_subnetworks = false
-  routing_mode            = "REGIONAL"
+
+data "google_compute_network" "vpc" {
+  name    = "main-vpc"
+  project = var.project_id
 }
 
-resource "google_compute_subnetwork" "public" {
-  name                     = "public-subnet"
-  ip_cidr_range            = var.public_subnet_cidr
-  region                   = var.region
-  network                  = google_compute_network.vpc.id
-  private_ip_google_access = false
+
+data "google_compute_subnetwork" "private" {
+  name    = "private-subnet"
+  region  = var.region
+  project = var.project_id
 }
 
-resource "google_compute_subnetwork" "private" {
-  name                     = "private-subnet"
-  ip_cidr_range            = var.private_subnet_cidr
-  region                   = var.region
-  network                  = google_compute_network.vpc.id
-  private_ip_google_access = true
+# Cluster GKE
+resource "google_container_cluster" "gke" {
+  name                     = "php-cluster"
+  location                 = var.zone
+  network                  = data.google_compute_network.vpc.id
+  subnetwork               = data.google_compute_subnetwork.private.id
+  remove_default_node_pool = true
+  initial_node_count       = 1
+  ip_allocation_policy {}
 }
 
-resource "google_compute_firewall" "allow_http_ssh" {
-  name    = "fw-allow-http-ssh"
-  network = google_compute_network.vpc.name
+# Node Pool avec autoscaling
+resource "google_container_node_pool" "nodes" {
+  cluster  = google_container_cluster.gke.name
+  location = var.zone
 
-  allow {
-    protocol = "tcp"
-    ports    = ["22", "80"]
-  }
-
-  source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["web"]
-}
-
-resource "google_compute_instance" "web" {
-  name         = "web-vm"
-  machine_type = "e2-medium"
-  zone         = var.zone
-  tags         = ["web"]
-
-  boot_disk {
-    initialize_params {
-      image = "projects/debian-cloud/global/images/family/debian-12"
-      size  = 10
-      type  = "pd-balanced"
+  node_config {
+    machine_type = "e2-small"
+    oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+    metadata = {
+      disable-legacy-endpoints = "true"
     }
   }
 
-  network_interface {
-    subnetwork   = google_compute_subnetwork.public.id
-    access_config {}
+  autoscaling {
+    min_node_count = 0
+    max_node_count = 1
   }
 
-  metadata_startup_script = <<-EOF
-    sudo apt-get update -y
-    sudo apt-get install -y nginx
-  EOF
+  node_count = 1
 }
 
-resource "google_service_networking_connection" "private_vpc_connection" {
-  network                 = google_compute_network.vpc.id
-  service                 = "servicenetworking.googleapis.com"
-  reserved_peering_ranges = [google_compute_global_address.sql_range.name]
-}
-
-resource "google_compute_global_address" "sql_range" {
-  name          = "sql-private-range"
-  purpose       = "VPC_PEERING"
-  address_type  = "INTERNAL"
-  prefix_length = 24
-  network       = google_compute_network.vpc.id
-}
-
-resource "google_sql_database_instance" "postgres" {
-  name             = "app_database"
-  database_version = "POSTGRES_15"
-  region           = var.region
-
-  settings {
-    tier = "db-f1-micro"
-
-    ip_configuration {
-      ipv4_enabled    = false
-      private_network = google_compute_network.vpc.id
-    }
-
-    availability_type = "ZONAL"
-
-    backup_configuration {
-      enabled = true
-    }
-  }
-
-  deletion_protection = false
-}
-
-resource "google_sql_user" "app" {
-  name     = "app_user"
-  instance = google_sql_database_instance.postgres.name
-  password = var.db_password
+# Persistent Disk pour MySQL
+resource "google_compute_disk" "mysql_data" {
+  name  = "mysql-disk"
+  size  = 10
+  type  = "pd-balanced"
+  zone  = var.zone
 }
