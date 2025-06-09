@@ -16,7 +16,7 @@ Change the mode variable for developement or producitons purpose.
 ```
 mode=dev
 cd kustomize/base
-helm template sample-app ../../helm/sample-app --values ../overlays/${mode}/values-${mode}.yaml --output-dir rendered
+helm template sample-app ../../helm/sample-app --values ../overlays/${mode}/values-${mode}.yml --output-dir rendered
 echo "*" > ./rendered/.gitignore
 ```
 
