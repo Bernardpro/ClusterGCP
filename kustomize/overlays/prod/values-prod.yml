@@ -1,0 +1,43 @@
+replicaCount: 2
+
+image:
+  repository: kubequest/sample-app
+  tag: 0.0.3
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+env:
+  APP_DEBUG: "true"
+  APP_ENV: "prod"
+  APP_KEY: "base64:DJYTvaRkEZ/YcQsX3TMpB0iCjgme2rhlIOus9A1hnj4="
+  DB_CONNECTION: mysql
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_DATABASE: app_database
+  DB_USERNAME: app_user
+  DB_PASSWORD: app_password
+
+ingress:
+  enabled: true
+  host: app.local
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+mysql:
+  enabled: true
+  image: mysql:8.0
+  rootPassword: app_root_password
+  user: app_user
+  password: app_password
+  database: app_database
+  port: 3306
+  volumeSize: 1Gi
