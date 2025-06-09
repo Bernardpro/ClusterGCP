@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: php-index
+  namespace: demo
+data:
+  index.php: |
+    <?php
+    phpinfo();
+    ?>
