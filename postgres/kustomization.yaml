@@ -1,9 +1,0 @@
-namespace: postgres
-resources:
-  - rendered/postgresql/templates/primary/networkpolicy.yaml
-  - rendered/postgresql/templates/primary/pdb.yaml
-  - rendered/postgresql/templates/primary/statefulset.yaml
-  - rendered/postgresql/templates/primary/svc-headless.yaml
-  - rendered/postgresql/templates/primary/svc.yaml
-  - rendered/postgresql/templates/secrets.yaml
-  - rendered/postgresql/templates/serviceaccount.yaml
