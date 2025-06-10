@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: kubequest/sample-app
-  tag: 0.0.3
+  tag: 0.0.4
   pullPolicy: IfNotPresent
 
 service:
