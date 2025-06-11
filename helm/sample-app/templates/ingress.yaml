@@ -4,19 +4,19 @@ kind: Ingress
 metadata:
   name: {{ .Chart.Name }}-ingress
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "{{ .Values.ingress.enableTLS | default false | quote }}"
+    nginx.ingress.kubernetes.io/rewrite-target: "/"
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ if .Values.ingress.enableTLS }}"true"{{ else }}"false"{{ end }}
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     {{- if and .Values.certManager.enabled .Values.ingress.enableTLS }}
-    cert-manager.io/cluster-issuer: {{ .Values.certManager.issuerName | quote }}
+    cert-manager.io/cluster-issuer: "{{ .Values.certManager.issuerName }}"
     {{- end }}
 spec:
-  {{- if .Values.ingress.enableTLS }}
+{{- if .Values.ingress.enableTLS }}
   tls:
     - hosts:
         - {{ .Values.ingress.host }}
       secretName: {{ .Values.ingress.tlsSecretName }}
-  {{- end }}
+{{- end }}
   rules:
     - host: {{ .Values.ingress.host }}
       http:
