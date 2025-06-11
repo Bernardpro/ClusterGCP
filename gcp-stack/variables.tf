@@ -53,11 +53,16 @@ variable "github_repo" {
 variable "app_path" {
   description = "Path to the application Helm chart"
   type        = string
-  default     = "charts/myapp"
+  default     = "helm/sample-app"
 }
 
 variable "app_namespace" {
   description = "Kubernetes namespace for the application php"
   type        = string
   default     = "sample-app"
+}
+variable "environnement" {
+  description = "Environnement for the application"
+  type        = string
+  default     = "dev"
 }

@@ -32,6 +32,13 @@ cd gcp-stack
 terraform apply
 ```
 
+For init argocd you need to run the command bellow :
+```
+gcloud login
+gcloud container clusters get-credentials php-cluster   --region europe-west1-b   --project project_id
+```
+
+
 ## 4. Stop stack for economics usage
 
 ```

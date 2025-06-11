@@ -5,4 +5,5 @@ create_subnet = true
 github_repo = "T-CLO-902-LYO_1"
 github_token = "token"
 github_user = "EpitechMscProPromo2025"
-
+app_path = "helm/sample-app"
+environnement= "prod"

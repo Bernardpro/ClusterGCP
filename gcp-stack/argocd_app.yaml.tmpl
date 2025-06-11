@@ -6,9 +6,12 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/${github_user}/${github_repo}
+    repoURL:  https://x-access-token:${github_token}@github.com/${github_user}/${github_repo}
     targetRevision: HEAD
-    path: ${app_path}      # Ex: charts/myapp ou kustomize/dev
+    path: ${app_path}
+    helm:
+      valueFiles:
+        - ./values.yaml      
   destination:
     server: https://kubernetes.default.svc
     namespace: ${app_namespace}

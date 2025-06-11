@@ -132,7 +132,6 @@ resource "helm_release" "cert_manager" {
   namespace  = "cert-manager"
   version    = "v1.13.2"
   create_namespace = true
-  depends_on = [null_resource.gcloud_get_credentials]
 
   set {
     name  = "installCRDs"
@@ -155,19 +154,26 @@ resource "helm_release" "argocd" {
   }
 }
 
-resource "null_resource" "argocd_app" {
-  provisioner "local-exec" {
-    command = <<EOT
-      cat <<EOF | kubectl apply -f -
-$(templatefile("${path.module}/argocd_app.yaml.tmpl", {
-  github_user    = var.github_user,
-  github_repo    = var.github_repo,
-  app_path       = var.app_path,
-  app_namespace  = var.app_namespace
-}))
-EOF
-    EOT
-  }
+# Apply the stack once and uncomment the next block to deploy the ArgoCD application
+# --- Déploiement de l'application via ArgoCD ---
 
-  depends_on = [helm_release.argocd]
-}
+# Uncomment the following block to deploy the application via ArgoCD
+
+# resource "null_resource" "argocd_app" {
+#   provisioner "local-exec" {
+#     command = <<EOT
+#       echo '${templatefile("${path.module}/argocd_app.yaml.tmpl", {
+#         github_user    = var.github_user,
+#         github_repo    = var.github_repo,
+#         app_path       = var.app_path,
+#         github_token   = var.github_token,
+#         environnement  = var.environnement,
+#         app_namespace  = var.app_namespace
+#       })}' > /tmp/argocd_app.yaml
+
+#       kubectl apply -f /tmp/argocd_app.yaml
+#     EOT
+#   }
+
+#   depends_on = [helm_release.argocd]
+# }
