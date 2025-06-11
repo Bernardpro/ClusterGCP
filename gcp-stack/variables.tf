@@ -1,8 +1,11 @@
 variable "project_id" {
+  description = "value of GOOGLE_CLOUD_PROJECT"
   type = string
 }
 
 variable "credentials_file" {
+  description = "value of GOOGLE_APPLICATION_CREDENTIALS"
+  default     = "credentials/terraform-sa.json"
   type = string
 }
 
@@ -31,4 +34,30 @@ variable "create_subnet" {
   description = "Set to true to create private-subnet, false to use existing"
   type        = bool
   default     = false
+}
+variable "github_token" {
+  description = "GitHub token for authentication"
+  type        = string
+}
+
+variable "github_user" {
+  description = "GitHub user or organization"
+  type        = string
+}
+
+variable "github_repo" {
+  description = "GitHub repository name"
+  type        = string
+}
+
+variable "app_path" {
+  description = "Path to the application Helm chart"
+  type        = string
+  default     = "charts/myapp"
+}
+
+variable "app_namespace" {
+  description = "Kubernetes namespace for the application php"
+  type        = string
+  default     = "sample-app"
 }

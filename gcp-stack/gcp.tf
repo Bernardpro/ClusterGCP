@@ -101,3 +101,73 @@ resource "google_compute_disk" "mysql_data" {
   type  = "pd-balanced"
   zone  = var.zone
 }
+
+data "google_container_cluster" "gke" {
+  name     = google_container_cluster.gke.name
+  location = var.zone
+}
+
+data "google_client_config" "current" {}
+
+
+provider "helm" {
+  kubernetes {
+    host                   = "https://${data.google_container_cluster.gke.endpoint}"
+    cluster_ca_certificate = base64decode(data.google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
+    token                  = data.google_client_config.current.access_token
+  }
+}
+
+provider "kubernetes" {
+  host                   = "https://${data.google_container_cluster.gke.endpoint}"
+  cluster_ca_certificate = base64decode(data.google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
+  token                  = data.google_client_config.current.access_token
+}
+
+# --- Installation de cert-manager via Helm ---
+resource "helm_release" "cert_manager" {
+  name       = "cert-manager"
+  repository = "https://charts.jetstack.io"
+  chart      = "cert-manager"
+  namespace  = "cert-manager"
+  version    = "v1.13.2"
+  create_namespace = true
+  depends_on = [null_resource.gcloud_get_credentials]
+
+  set {
+    name  = "installCRDs"
+    value = "true"
+  }
+}
+
+# --- Installation d'ArgoCD via Helm ---
+resource "helm_release" "argocd" {
+  name       = "argocd"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argo-cd"
+  namespace  = "argocd"
+  create_namespace = true
+  version    = "5.51.6"
+
+  set {
+    name  = "server.service.type"
+    value = "LoadBalancer"
+  }
+}
+
+resource "null_resource" "argocd_app" {
+  provisioner "local-exec" {
+    command = <<EOT
+      cat <<EOF | kubectl apply -f -
+$(templatefile("${path.module}/argocd_app.yaml.tmpl", {
+  github_user    = var.github_user,
+  github_repo    = var.github_repo,
+  app_path       = var.app_path,
+  app_namespace  = var.app_namespace
+}))
+EOF
+    EOT
+  }
+
+  depends_on = [helm_release.argocd]
+}

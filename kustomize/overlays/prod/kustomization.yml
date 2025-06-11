@@ -1,7 +1,15 @@
-# helmCharts:
-#   - name: sample-app
-#     releaseName: sample-app
-#     repo: file://../../../helm/sample-app
-#     valuesFile: values-prod.yaml
-resources:
-  - ../../base
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  - name: sample-app
+    path: ../../../helm/sample-app
+    version: 0.1.0
+    valuesFile: values-prod.yaml
+    releaseName: sample-app
+
+namespace: prod
+
+
+# resources:
+#   - ../../base
