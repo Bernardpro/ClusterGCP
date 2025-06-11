@@ -22,7 +22,9 @@ env:
 
 ingress:
   enabled: true
-  host: app.local
+  enableTLS: true
+  host: sample-app.spectrum.cloud
+  tlsSecretName: sample-app-cert
 
 resources:
   requests:
@@ -50,8 +52,5 @@ certManager:
   privateKeySecretName: letsencrypt-prod
   ingressClass: nginx
 
-ingress:
-  enabled: true
-  host: sample-app.spectrum.cloud
-  tlsSecretName: sample-app-cert
+
 

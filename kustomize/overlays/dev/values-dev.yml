@@ -22,7 +22,9 @@ env:
 
 ingress:
   enabled: true
-  host: app.local
+  host: dev.localhost
+  enableTLS: false
+  tlsSecretName: "" 
 
 resources:
   requests:
@@ -41,3 +43,5 @@ mysql:
   database: app_database
   port: 3306
   volumeSize: 1Gi
+
+
