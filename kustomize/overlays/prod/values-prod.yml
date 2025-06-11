@@ -41,3 +41,11 @@ mysql:
   database: app_database
   port: 3306
   volumeSize: 1Gi
+
+certManager:
+  enabled: true
+  issuerName: letsencrypt-prod
+  acmeServer: https://acme-v02.api.letsencrypt.org/directory
+  email: ber.maxime.paul@gmail.com  
+  privateKeySecretName: letsencrypt-prod
+  ingressClass: nginx

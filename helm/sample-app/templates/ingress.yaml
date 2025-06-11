@@ -5,7 +5,14 @@ metadata:
   name: {{ .Chart.Name }}-ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    cert-manager.io/cluster-issuer: {{ .Values.certManager.issuerName }}
 spec:
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tlsSecretName }}
   rules:
     - host: {{ .Values.ingress.host }}
       http:
