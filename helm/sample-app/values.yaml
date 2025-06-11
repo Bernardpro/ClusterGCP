@@ -46,6 +46,12 @@ certManager:
   enabled: true
   issuerName: letsencrypt-prod
   acmeServer: https://acme-v02.api.letsencrypt.org/directory
-  email: your-email@example.com  # <-- à modifier
+  email: ber.maxime.paul@gmail.com  
   privateKeySecretName: letsencrypt-prod
   ingressClass: nginx
+
+ingress:
+  enabled: true
+  host: sample-app.spectrum.cloud
+  tlsSecretName: sample-app-cert
+

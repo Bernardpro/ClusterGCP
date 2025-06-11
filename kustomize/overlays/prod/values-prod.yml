@@ -49,3 +49,9 @@ certManager:
   email: ber.maxime.paul@gmail.com  
   privateKeySecretName: letsencrypt-prod
   ingressClass: nginx
+
+ingress:
+  enabled: true
+  host: sample-app.spectrum.cloud
+  tlsSecretName: sample-app-cert
+
