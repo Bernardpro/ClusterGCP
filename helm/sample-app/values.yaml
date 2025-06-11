@@ -23,7 +23,7 @@ env:
 ingress:
   enabled: true
   enableTLS: true
-  host: sample-app.spectrum.cloud
+  host: sample-app.spectrum-app.cloud
   tlsSecretName: sample-app-cert
 
 resources:

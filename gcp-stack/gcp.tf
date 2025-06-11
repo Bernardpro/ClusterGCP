@@ -61,6 +61,11 @@ resource "google_compute_address" "ingress_static" {
   region = var.region
 }
 
+resource "google_compute_address" "argocd_static_ip" {
+  name   = "argocd-static-ip"
+  region = var.region
+}
+
 # --- Cluster GKE ---
 resource "google_container_cluster" "gke" {
   name                     = "php-cluster"
@@ -88,7 +93,7 @@ resource "google_container_node_pool" "nodes" {
 
   autoscaling {
     min_node_count = 1
-    max_node_count = 3
+    max_node_count = 4
   }
 
   node_count = 1
@@ -152,28 +157,68 @@ resource "helm_release" "argocd" {
     name  = "server.service.type"
     value = "LoadBalancer"
   }
+
+  set {
+    name  = "server.service.loadBalancerIP"
+    value = google_compute_address.argocd_static_ip.address
+  }
+
+  depends_on = [google_compute_address.argocd_static_ip]
+
 }
+
+resource "helm_release" "nginx_ingress" {
+  name       = "ingress-nginx"
+  repository = "https://kubernetes.github.io/ingress-nginx"
+  chart      = "ingress-nginx"
+  namespace  = "ingress-nginx"
+  create_namespace = true
+
+  set {
+    name  = "controller.service.type"
+    value = "LoadBalancer"
+  }
+
+  set {
+    name  = "controller.admissionWebhooks.enabled"
+    value = "false"
+  }
+  set {
+    name  = "controller.service.loadBalancerIP"
+    value = google_compute_address.ingress_static.address
+  }
+  set {
+    name  = "controller.resources.requests.cpu"
+    value = "50m"
+  }
+
+  set {
+    name  = "controller.resources.requests.memory"
+    value = "64Mi"
+  }
+}
+
 
 # Apply the stack once and uncomment the next block to deploy the ArgoCD application
 # --- Déploiement de l'application via ArgoCD ---
 
 # Uncomment the following block to deploy the application via ArgoCD
 
-# resource "null_resource" "argocd_app" {
-#   provisioner "local-exec" {
-#     command = <<EOT
-#       echo '${templatefile("${path.module}/argocd_app.yaml.tmpl", {
-#         github_user    = var.github_user,
-#         github_repo    = var.github_repo,
-#         app_path       = var.app_path,
-#         github_token   = var.github_token,
-#         environnement  = var.environnement,
-#         app_namespace  = var.app_namespace
-#       })}' > /tmp/argocd_app.yaml
+resource "null_resource" "argocd_app" {
+  provisioner "local-exec" {
+    command = <<EOT
+      echo '${templatefile("${path.module}/argocd_app.yaml.tmpl", {
+        github_user    = var.github_user,
+        github_repo    = var.github_repo,
+        app_path       = var.app_path,
+        github_token   = var.github_token,
+        environnement  = var.environnement,
+        app_namespace  = var.app_namespace
+      })}' > /tmp/argocd_app.yaml
 
-#       kubectl apply -f /tmp/argocd_app.yaml
-#     EOT
-#   }
+      kubectl apply -f /tmp/argocd_app.yaml
+    EOT
+  }
 
-#   depends_on = [helm_release.argocd]
-# }
+  depends_on = [helm_release.argocd]
+}

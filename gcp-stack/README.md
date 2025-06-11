@@ -52,3 +52,13 @@ terraform destroy -target=google_container_node_pool.nodes
 cd gcp-stack
 terraform apply -target=google_container_node_pool.nodes
 ```
+
+## 6. Fecth the credentials for argocd :
+
+```
+kubectl get svc -A | grep LoadBalancer
+```
+
+```
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo
+```
