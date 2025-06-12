@@ -52,5 +52,10 @@ certManager:
   privateKeySecretName: letsencrypt-prod
   ingressClass: nginx
 
+ingressArgocd:
+  enabled: true
+  host: argocd.spectrum-app.cloud
+  tlsSecretName: argocd-cert
+
 
 
