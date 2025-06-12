@@ -1,1 +1,5 @@
 *.backup
+
+# prevent pushing of cloud-provider auth/terraform config
+# if you need to not ignore a file in that folder, use !<file name> (ex: !test.json) 
+credentials/*
