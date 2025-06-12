@@ -93,7 +93,7 @@ resource "google_container_node_pool" "nodes" {
 
   autoscaling {
     min_node_count = 1
-    max_node_count = 4
+    max_node_count = 3
   }
 
   node_count = 1
@@ -173,7 +173,7 @@ resource "helm_release" "nginx_ingress" {
   chart      = "ingress-nginx"
   namespace  = "ingress-nginx"
   create_namespace = true
-
+  timeout = "600"
   set {
     name  = "controller.service.type"
     value = "LoadBalancer"
