@@ -66,38 +66,42 @@ resource "google_compute_address" "argocd_static_ip" {
   region = var.region
 }
 
-# --- Cluster GKE ---
-resource "google_container_cluster" "gke" {
-  name                     = "php-cluster"
-  location                 = var.zone
-  network                  = local.vpc_id
-  subnetwork               = local.subnet_id  
-  remove_default_node_pool = true
-  initial_node_count       = 1
-  ip_allocation_policy {}
-}
+# --- Create 2 VM ubuntu GCP ---
+resource "google_compute_instance" "k8s_nodes" {
+  count        = 2
+  name         = "k8s-node-${count.index + 1}"
+  machine_type = "e2-medium"
+  zone         = var.zone
 
-
-# --- Node Pool avec autoscaling ---
-resource "google_container_node_pool" "nodes" {
-  cluster  = google_container_cluster.gke.name
-  location = var.zone
-
-  node_config {
-    machine_type = "e2-small"
-    oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
-    metadata = {
-      disable-legacy-endpoints = "true"
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      size  = 20
     }
   }
 
-  autoscaling {
-    min_node_count = 1
-    max_node_count = 3
+  network_interface {
+    network    = google_compute_network.main[0].id
+    subnetwork = google_compute_subnetwork.private[0].id
+    access_config {}
   }
 
-  node_count = 1
+  metadata = {
+    ssh-keys = "${var.ssh_user}:${file(var.public_key_path)}"
+  }
 }
+
+resource "null_resource" "provision_k8s" {
+  depends_on = [google_compute_instance.k8s_nodes]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      ANSIBLE_HOST_KEY_CHECKING=False \
+      ansible-playbook -i inventory.ini provision-k8s.yml --private-key ${var.private_key_path} -u ${var.ssh_user}
+    EOT
+  }
+}
+
 
 # --- Disque Persistant pour MySQL ---
 resource "google_compute_disk" "mysql_data" {
@@ -107,96 +111,76 @@ resource "google_compute_disk" "mysql_data" {
   zone  = var.zone
 }
 
-data "google_container_cluster" "gke" {
-  name     = google_container_cluster.gke.name
-  location = var.zone
-}
+# data "google_client_config" "current" {}
 
-data "google_client_config" "current" {}
+# # --- Installation de cert-manager via Helm ---
+# resource "helm_release" "cert_manager" {
+#   name       = "cert-manager"
+#   repository = "https://charts.jetstack.io"
+#   chart      = "cert-manager"
+#   namespace  = "cert-manager"
+#   version    = "v1.13.2"
+#   create_namespace = true
 
-
-provider "helm" {
-  kubernetes {
-    host                   = "https://${data.google_container_cluster.gke.endpoint}"
-    cluster_ca_certificate = base64decode(data.google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
-    token                  = data.google_client_config.current.access_token
-  }
-}
-
-provider "kubernetes" {
-  host                   = "https://${data.google_container_cluster.gke.endpoint}"
-  cluster_ca_certificate = base64decode(data.google_container_cluster.gke.master_auth[0].cluster_ca_certificate)
-  token                  = data.google_client_config.current.access_token
-}
-
-# --- Installation de cert-manager via Helm ---
-resource "helm_release" "cert_manager" {
-  name       = "cert-manager"
-  repository = "https://charts.jetstack.io"
-  chart      = "cert-manager"
-  namespace  = "cert-manager"
-  version    = "v1.13.2"
-  create_namespace = true
-
-  set {
-    name  = "installCRDs"
-    value = "true"
-  }
-}
+#   set {
+#     name  = "installCRDs"
+#     value = "true"
+#   }
+# }
 
 # --- Installation d'ArgoCD via Helm ---
-resource "helm_release" "argocd" {
-  name       = "argocd"
-  repository = "https://argoproj.github.io/argo-helm"
-  chart      = "argo-cd"
-  namespace  = "argocd"
-  create_namespace = true
-  version    = "5.51.6"
+# resource "helm_release" "argocd" {
+#   name       = "argocd"
+#   repository = "https://argoproj.github.io/argo-helm"
+#   chart      = "argo-cd"
+#   namespace  = "argocd"
+#   create_namespace = true
+#   version    = "5.51.6"
 
-  set {
-    name  = "server.service.type"
-    value = "LoadBalancer"
-  }
+#   set {
+#     name  = "server.service.type"
+#     value = "LoadBalancer"
+#   }
 
-  set {
-    name  = "server.service.loadBalancerIP"
-    value = google_compute_address.argocd_static_ip.address
-  }
+#   set {
+#     name  = "server.service.loadBalancerIP"
+#     value = google_compute_address.argocd_static_ip.address
+#   }
 
-  depends_on = [google_compute_address.argocd_static_ip]
+#   depends_on = [google_compute_address.argocd_static_ip]
 
-}
+# }
 
-resource "helm_release" "nginx_ingress" {
-  name       = "ingress-nginx"
-  repository = "https://kubernetes.github.io/ingress-nginx"
-  chart      = "ingress-nginx"
-  namespace  = "ingress-nginx"
-  create_namespace = true
-  timeout = "600"
-  set {
-    name  = "controller.service.type"
-    value = "LoadBalancer"
-  }
+# resource "helm_release" "nginx_ingress" {
+#   name       = "ingress-nginx"
+#   repository = "https://kubernetes.github.io/ingress-nginx"
+#   chart      = "ingress-nginx"
+#   namespace  = "ingress-nginx"
+#   create_namespace = true
+#   timeout = "600"
+#   set {
+#     name  = "controller.service.type"
+#     value = "LoadBalancer"
+#   }
 
-  set {
-    name  = "controller.admissionWebhooks.enabled"
-    value = "false"
-  }
-  set {
-    name  = "controller.service.loadBalancerIP"
-    value = google_compute_address.ingress_static.address
-  }
-  set {
-    name  = "controller.resources.requests.cpu"
-    value = "50m"
-  }
+#   set {
+#     name  = "controller.admissionWebhooks.enabled"
+#     value = "false"
+#   }
+#   set {
+#     name  = "controller.service.loadBalancerIP"
+#     value = google_compute_address.ingress_static.address
+#   }
+#   set {
+#     name  = "controller.resources.requests.cpu"
+#     value = "50m"
+#   }
 
-  set {
-    name  = "controller.resources.requests.memory"
-    value = "64Mi"
-  }
-}
+#   set {
+#     name  = "controller.resources.requests.memory"
+#     value = "64Mi"
+#   }
+# }
 
 
 # Apply the stack once and uncomment the next block to deploy the ArgoCD application
@@ -204,21 +188,21 @@ resource "helm_release" "nginx_ingress" {
 
 # Uncomment the following block to deploy the application via ArgoCD
 
-resource "null_resource" "argocd_app" {
-  provisioner "local-exec" {
-    command = <<EOT
-      echo '${templatefile("${path.module}/argocd_app.yaml.tmpl", {
-        github_user    = var.github_user,
-        github_repo    = var.github_repo,
-        app_path       = var.app_path,
-        github_token   = var.github_token,
-        environnement  = var.environnement,
-        app_namespace  = var.app_namespace
-      })}' > /tmp/argocd_app.yaml
+# resource "null_resource" "argocd_app" {
+#   provisioner "local-exec" {
+#     command = <<EOT
+#       echo '${templatefile("${path.module}/argocd_app.yaml.tmpl", {
+#         github_user    = var.github_user,
+#         github_repo    = var.github_repo,
+#         app_path       = var.app_path,
+#         github_token   = var.github_token,
+#         environnement  = var.environnement,
+#         app_namespace  = var.app_namespace
+#       })}' > /tmp/argocd_app.yaml
 
-      kubectl apply -f /tmp/argocd_app.yaml
-    EOT
-  }
+#       kubectl apply -f /tmp/argocd_app.yaml
+#     EOT
+#   }
 
-  depends_on = [helm_release.argocd]
-}
+#   depends_on = [helm_release.argocd]
+# }

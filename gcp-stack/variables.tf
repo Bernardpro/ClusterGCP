@@ -66,3 +66,27 @@ variable "environnement" {
   type        = string
   default     = "dev"
 }
+
+variable "ssh_user" {
+  description = "SSH user for the instances"
+  type        = string
+  default     = "ubuntu"
+}
+
+variable "ssh_key_path" {
+  description = "Path to the SSH private key"
+  type        = string
+  default     = "credentials/ssh-key"
+}
+
+variable "public_key_path" {
+  description = "Path to the SSH public key"
+  type        = string
+  default     = "credentials/ssh-key.pub"
+}
+
+variable "private_key_path" {
+  description = "Path to the SSH public key"
+  type        = string
+  default     = "credentials/ssh-key.pub"
+}
