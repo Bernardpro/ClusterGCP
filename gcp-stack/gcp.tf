@@ -144,7 +144,7 @@ resource "null_resource" "provision_k8s" {
   provisioner "local-exec" {
     command = <<EOT
       ANSIBLE_HOST_KEY_CHECKING=False \
-      uv ansible-playbook provision-k8s.yml \
+      uv run ansible-playbook provision-k8s.yml \
         -i inventory.ini \
         --private-key ${var.private_key_path} \
         -u ${var.ssh_user}
