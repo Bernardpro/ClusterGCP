@@ -107,10 +107,11 @@ resource "google_compute_instance" "k8s_nodes" {
   }
 
   network_interface {
-    network    = google_compute_network.main[0].id
-    subnetwork = google_compute_subnetwork.private[0].id
+    network    = local.vpc_id
+    subnetwork = local.subnet_id
     access_config {}
   }
+
 
   tags = ["ssh-enabled"]
 

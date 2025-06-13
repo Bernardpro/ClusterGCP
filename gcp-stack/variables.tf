@@ -88,5 +88,5 @@ variable "public_key_path" {
 variable "private_key_path" {
   description = "Path to the SSH public key"
   type        = string
-  default     = "credentials/ssh-key.pub"
+  default     = "credentials/ssh-key"
 }
