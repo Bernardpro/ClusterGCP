@@ -15,7 +15,7 @@ provider "google" {
   zone        = var.zone
 }
 
-# --- VPC : create OR use existing ---
+# --- Réseau VPC et Subnet ---
 resource "google_compute_network" "main" {
   count                   = var.create_vpc ? 1 : 0
   name                    = "main-vpc"
@@ -31,8 +31,6 @@ data "google_compute_network" "main" {
 locals {
   vpc_id = var.create_vpc ? google_compute_network.main[0].id : data.google_compute_network.main[0].id
 }
-
-
 
 resource "google_compute_subnetwork" "private" {
   count                    = var.create_subnet ? 1 : 0
@@ -54,8 +52,7 @@ locals {
   subnet_id = var.create_subnet ? google_compute_subnetwork.private[0].id : data.google_compute_subnetwork.private[0].id
 }
 
-
-# --- Adresse IP statique pour Ingress NGINX ---
+# --- IPs Statique pour services externes ---
 resource "google_compute_address" "ingress_static" {
   name   = "ingress-static-ip"
   region = var.region
@@ -66,7 +63,36 @@ resource "google_compute_address" "argocd_static_ip" {
   region = var.region
 }
 
-# --- Create 2 VM ubuntu GCP ---
+# --- Disque Persitant MySQL protégé ---
+resource "google_compute_disk" "mysql_data" {
+  name  = "mysql-disk"
+  size  = 10
+  type  = "pd-balanced"
+  zone  = var.zone
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+# --- Règle firewall pour SSH ---
+resource "google_compute_firewall" "allow_ssh" {
+  name    = "allow-ssh"
+  network = local.vpc_id
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  direction     = "INGRESS"
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["ssh-enabled"]
+
+  description = "Allow SSH from anywhere"
+}
+
+# --- Instances Ubuntu (nodes Kubernetes) ---
 resource "google_compute_instance" "k8s_nodes" {
   count        = 2
   name         = "k8s-node-${count.index + 1}"
@@ -86,123 +112,42 @@ resource "google_compute_instance" "k8s_nodes" {
     access_config {}
   }
 
+  tags = ["ssh-enabled"]
+
   metadata = {
     ssh-keys = "${var.ssh_user}:${file(var.public_key_path)}"
   }
 }
 
+# --- Génération de l'inventory.ini ---
+data "template_file" "inventory" {
+  template = file("${path.module}/inventory.tmpl")
+
+  vars = {
+    k8s_ips = join("\n", google_compute_instance.k8s_nodes[*].network_interface[0].access_config[0].nat_ip)
+  }
+}
+
+resource "null_resource" "generate_inventory" {
+  provisioner "local-exec" {
+    command = "echo '${data.template_file.inventory.rendered}' > inventory.ini"
+  }
+}
+
+# --- Provisionnement du cluster avec Ansible ---
 resource "null_resource" "provision_k8s" {
-  depends_on = [google_compute_instance.k8s_nodes]
+  depends_on = [
+    google_compute_instance.k8s_nodes,
+    null_resource.generate_inventory
+  ]
 
   provisioner "local-exec" {
     command = <<EOT
       ANSIBLE_HOST_KEY_CHECKING=False \
-      ansible-playbook -i inventory.ini provision-k8s.yml --private-key ${var.private_key_path} -u ${var.ssh_user}
+      uv ansible-playbook provision-k8s.yml \
+        -i inventory.ini \
+        --private-key ${var.private_key_path} \
+        -u ${var.ssh_user}
     EOT
   }
 }
-
-
-# --- Disque Persistant pour MySQL ---
-resource "google_compute_disk" "mysql_data" {
-  name  = "mysql-disk"
-  size  = 10
-  type  = "pd-balanced"
-  zone  = var.zone
-}
-
-# data "google_client_config" "current" {}
-
-# # --- Installation de cert-manager via Helm ---
-# resource "helm_release" "cert_manager" {
-#   name       = "cert-manager"
-#   repository = "https://charts.jetstack.io"
-#   chart      = "cert-manager"
-#   namespace  = "cert-manager"
-#   version    = "v1.13.2"
-#   create_namespace = true
-
-#   set {
-#     name  = "installCRDs"
-#     value = "true"
-#   }
-# }
-
-# --- Installation d'ArgoCD via Helm ---
-# resource "helm_release" "argocd" {
-#   name       = "argocd"
-#   repository = "https://argoproj.github.io/argo-helm"
-#   chart      = "argo-cd"
-#   namespace  = "argocd"
-#   create_namespace = true
-#   version    = "5.51.6"
-
-#   set {
-#     name  = "server.service.type"
-#     value = "LoadBalancer"
-#   }
-
-#   set {
-#     name  = "server.service.loadBalancerIP"
-#     value = google_compute_address.argocd_static_ip.address
-#   }
-
-#   depends_on = [google_compute_address.argocd_static_ip]
-
-# }
-
-# resource "helm_release" "nginx_ingress" {
-#   name       = "ingress-nginx"
-#   repository = "https://kubernetes.github.io/ingress-nginx"
-#   chart      = "ingress-nginx"
-#   namespace  = "ingress-nginx"
-#   create_namespace = true
-#   timeout = "600"
-#   set {
-#     name  = "controller.service.type"
-#     value = "LoadBalancer"
-#   }
-
-#   set {
-#     name  = "controller.admissionWebhooks.enabled"
-#     value = "false"
-#   }
-#   set {
-#     name  = "controller.service.loadBalancerIP"
-#     value = google_compute_address.ingress_static.address
-#   }
-#   set {
-#     name  = "controller.resources.requests.cpu"
-#     value = "50m"
-#   }
-
-#   set {
-#     name  = "controller.resources.requests.memory"
-#     value = "64Mi"
-#   }
-# }
-
-
-# Apply the stack once and uncomment the next block to deploy the ArgoCD application
-# --- Déploiement de l'application via ArgoCD ---
-
-# Uncomment the following block to deploy the application via ArgoCD
-
-# resource "null_resource" "argocd_app" {
-#   provisioner "local-exec" {
-#     command = <<EOT
-#       echo '${templatefile("${path.module}/argocd_app.yaml.tmpl", {
-#         github_user    = var.github_user,
-#         github_repo    = var.github_repo,
-#         app_path       = var.app_path,
-#         github_token   = var.github_token,
-#         environnement  = var.environnement,
-#         app_namespace  = var.app_namespace
-#       })}' > /tmp/argocd_app.yaml
-
-#       kubectl apply -f /tmp/argocd_app.yaml
-#     EOT
-#   }
-
-#   depends_on = [helm_release.argocd]
-# }
