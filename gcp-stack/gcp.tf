@@ -18,13 +18,13 @@ provider "google" {
 # --- Réseau VPC et Subnet ---
 resource "google_compute_network" "main" {
   count                   = var.create_vpc ? 1 : 0
-  name                    = "main-vpc"
+  name                    = "main-vpc-1"
   auto_create_subnetworks = false
 }
 
 data "google_compute_network" "main" {
   count   = var.create_vpc ? 0 : 1
-  name    = "main-vpc"
+  name    = "main-vpc-1"
   project = var.project_id
 }
 
@@ -69,10 +69,6 @@ resource "google_compute_disk" "mysql_data" {
   size  = 10
   type  = "pd-balanced"
   zone  = var.zone
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 # --- Règle firewall pour SSH ---
@@ -122,10 +118,11 @@ resource "google_compute_instance" "k8s_nodes" {
 
 # --- Génération de l'inventory.ini ---
 data "template_file" "inventory" {
-  template = file("${path.module}/inventory.tmpl")
+  template = file("${path.module}/template/inventory.tmpl")
 
   vars = {
-    k8s_ips = join("\n", google_compute_instance.k8s_nodes[*].network_interface[0].access_config[0].nat_ip)
+    master_ip   = google_compute_instance.k8s_nodes[0].network_interface[0].access_config[0].nat_ip
+    worker_ips  = join("\n", slice(google_compute_instance.k8s_nodes[*].network_interface[0].access_config[0].nat_ip, 1, length(google_compute_instance.k8s_nodes[*].network_interface[0].access_config[0].nat_ip)))
   }
 }
 
@@ -145,10 +142,10 @@ resource "null_resource" "provision_k8s" {
   provisioner "local-exec" {
     command = <<EOT
       ANSIBLE_HOST_KEY_CHECKING=False \
-      uv run ansible-playbook provision-k8s.yml \
+      uv run ansible-playbook ./ansible/provision-k8s.yml \
         -i inventory.ini \
         --private-key ${var.private_key_path} \
         -u ${var.ssh_user}
-    EOT
+    EOT 
   }
 }

@@ -1,8 +1,8 @@
 [master]
-34.52.254.34
+${master_ip}
 
 [worker]
-34.140.90.168
+${worker_ips}
 
 [k8s:children]
 master
@@ -10,4 +10,3 @@ worker
 
 [all:vars]
 ansible_python_interpreter=/usr/bin/python3
-
