@@ -136,16 +136,24 @@ resource "null_resource" "generate_inventory" {
 resource "null_resource" "provision_k8s" {
   depends_on = [
     google_compute_instance.k8s_nodes,
-    null_resource.generate_inventory
+    data.template_file.inventory  
   ]
 
   provisioner "local-exec" {
     command = <<EOT
+      echo "[INFO] Nettoyage des anciennes clés SSH connues..."
+
+      for ip in $(awk '/ansible_host=/ {for(i=1;i<=NF;i++) if ($i ~ /^ansible_host=/) {split($i,a,"="); print a[2]}}' inventory.ini); do
+        ssh-keygen -f "$HOME/.ssh/known_hosts" -R "$ip" || true
+      done
+
+      echo "[INFO] Lancement du playbook Ansible..."
       ANSIBLE_HOST_KEY_CHECKING=False \
       uv run ansible-playbook ./ansible/provision-k8s.yml \
         -i inventory.ini \
-        --private-key ${var.private_key_path} \
+        --private-key=${var.private_key_path} \
         -u ${var.ssh_user}
-    EOT 
+    EOT
+    interpreter = ["/bin/bash", "-c"]
   }
 }
