@@ -88,6 +88,22 @@ resource "google_compute_firewall" "allow_ssh" {
   description = "Allow SSH from anywhere"
 }
 
+resource "google_compute_firewall" "allow_internal" {
+  name    = "allow-internal"
+  network = local.vpc_id
+
+  allow {
+    protocol = "all"
+  }
+
+  direction     = "INGRESS"
+  source_ranges = ["10.0.0.0/8"]  # ou restreint à ton CIDR, ex: "10.0.1.0/24"
+  target_tags   = ["ssh-enabled"]
+
+  description = "Allow all internal traffic between nodes"
+}
+
+
 # --- Instances Ubuntu (nodes Kubernetes) ---
 resource "google_compute_instance" "k8s_nodes" {
   count        = 3
@@ -97,7 +113,7 @@ resource "google_compute_instance" "k8s_nodes" {
 
   boot_disk {
     initialize_params {
-      image = "ubuntu-2404-lts"
+      image =  "ubuntu-minimal-2404-lts-amd64"
       size  = 20
     }
   }
@@ -121,8 +137,12 @@ data "template_file" "inventory" {
   template = file("${path.module}/template/inventory.tmpl")
 
   vars = {
-    master_ip   = google_compute_instance.k8s_nodes[0].network_interface[0].access_config[0].nat_ip
-    worker_ips  = join("\n", slice(google_compute_instance.k8s_nodes[*].network_interface[0].access_config[0].nat_ip, 1, length(google_compute_instance.k8s_nodes[*].network_interface[0].access_config[0].nat_ip)))
+    master_public_ip    = google_compute_instance.k8s_nodes[0].network_interface[0].access_config[0].nat_ip
+    master_internal_ip  = google_compute_instance.k8s_nodes[0].network_interface[0].network_ip
+    worker_block = join("\n", [
+      for idx in range(1, 3) : 
+      "k8s-node-${idx + 1} ansible_host=${google_compute_instance.k8s_nodes[idx].network_interface[0].access_config[0].nat_ip} k8s_ip=${google_compute_instance.k8s_nodes[idx].network_interface[0].network_ip}"
+    ])
   }
 }
 
@@ -138,24 +158,44 @@ resource "null_resource" "provision_k8s" {
     google_compute_instance.k8s_nodes,
     data.template_file.inventory  
   ]
-
+  
   provisioner "local-exec" {
     command = <<EOT
       echo "[INFO] Attente que les ports SSH soient disponibles..."
-
-      for ip in $(awk '/ansible_host=/ {for(i=1;i<=NF;i++) if ($i ~ /^ansible_host=/) {split($i,a,"="); print a[2]}}' inventory.ini); do
-        echo "[WAIT] Vérification SSH pour $ip ..."
-        while ! nc -z -w3 $ip 22; do
-          sleep 15
-        done
-      done
+      sleep 15
 
       echo "[INFO] Nettoyage des anciennes clés SSH connues..."
       for ip in $(awk '/ansible_host=/ {for(i=1;i<=NF;i++) if ($i ~ /^ansible_host=/) {split($i,a,"="); print a[2]}}' inventory.ini); do
         ssh-keygen -f "$HOME/.ssh/known_hosts" -R "$ip" || true
       done
 
-      echo "[INFO] Lancement du playbook Ansible..."
+      echo "[INFO] Installation de containerd..."
+      ANSIBLE_HOST_KEY_CHECKING=False \
+      uv run ansible-playbook ./ansible/install-containerd.yml \
+        -i inventory.ini \
+        --private-key=${var.private_key_path} \
+        -u ${var.ssh_user}
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+    
+      echo "[INFO] Lancement du playbook Ansible change hostname..."
+      ANSIBLE_HOST_KEY_CHECKING=False \
+      uv run ansible-playbook ./ansible/update-hosts.yml \
+        -i inventory.ini \
+        --private-key=${var.private_key_path} \
+        -u ${var.ssh_user}
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+
+  }
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "[INFO] Lancement du playbook Ansible provisionnement Kubernetes..."
       ANSIBLE_HOST_KEY_CHECKING=False \
       uv run ansible-playbook ./ansible/provision-k8s.yml \
         -i inventory.ini \

@@ -1,6 +1,9 @@
 build:
-	terraform apply
+	terraform init && terraform plan && terraform apply
 restart:
-	terraform apply -target=google_container_node_pool.nodes
+	terraform apply 
 destroy:
-	terraform destroy -target=google_container_node_pool.nodes
+	terraform destroy
+
+unbuild:
+	terraform destroy && rm -rf .terraform && rm .terraform.lock.hcl && rm terraform.tfstate && rm terraform.tfstate.backup

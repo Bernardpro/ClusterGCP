@@ -1,0 +1,33 @@
+- name: Installer containerd sur les nœuds Kubernetes
+  hosts: k8s
+  become: true
+
+  tasks:
+    - name: Mettre à jour le cache APT initial
+      apt:
+        update_cache: yes
+
+    - name: Installer les paquets nécessaires
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gpg
+        state: present
+        
+    - name: Installer containerd
+      apt:
+        name: containerd
+        state: present
+
+    - name: Créer un fichier de configuration containerd si nécessaire
+      command: containerd config default > /etc/containerd/config.toml
+      args:
+        creates: /etc/containerd/config.toml
+
+    - name: Redémarrer containerd
+      systemd:
+        name: containerd
+        state: restarted
+        enabled: yes
