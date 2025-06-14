@@ -1,14 +1,15 @@
 ---
-- name: Préparer toutes les machines (master + workers)
+- name: Configurer le dépôt APT Kubernetes proprement (Ubuntu 22.04+)
   hosts: all
   become: true
 
-  tasks:
-    - name: Désactiver le swap (exigence kubelet)
-      command: swapoff -a
-      when: ansible_swaptotal_mb > 0
+  vars:
+    kubernetes_apt_key_path: /etc/apt/keyrings/kubernetes-archive-keyring.gpg
+    kubernetes_apt_list_path: /etc/apt/sources.list.d/kubernetes.list
 
-    - name: Installer paquets de base
+  tasks:
+
+    - name: Installer paquets préalables (sans update_cache)
       apt:
         name:
           - apt-transport-https
@@ -16,138 +17,22 @@
           - curl
           - gnupg
           - lsb-release
-        update_cache: yes
         state: present
 
-    - name: Ajouter repo Docker
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-      register: docker_key
-    - apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
-      when: docker_key is changed
-
-    - name: Installer containerd
-      apt:
-        name: containerd.io
-        state: latest
-        update_cache: yes
-
-    - name: Générer config containerd
+    - name: Ajouter la clé GPG de Kubernetes (dans keyrings)
       shell: |
-        mkdir -p /etc/containerd
-        containerd config default | tee /etc/containerd/config.toml
-        systemctl restart containerd
-
-    - name: Activer modules kernel k8s
-      copy:
-        dest: /etc/modules-load.d/k8s.conf
-        content: |
-          overlay
-          br_netfilter
-
-    - name: Paramètres sysctl
-      copy:
-        dest: /etc/sysctl.d/99-kubernetes.conf
-        content: |
-          net.bridge.bridge-nf-call-iptables  = 1
-          net.ipv4.ip_forward                 = 1
-          net.bridge.bridge-nf-call-ip6tables = 1
-      notify: Reload sysctl
-
-    - name: Ajouter repo Kubernetes
-      apt_key:
-        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-      register: k8s_key
-    - apt_repository:
-        repo: "deb http://apt.kubernetes.io/ kubernetes-xenial main"
-      when: k8s_key is changed
-
-    - name: Installer kubeadm/kubelet/kubectl
-      apt:
-        name: [ kubelet, kubeadm, kubectl ]
-        state: present
-        update_cache: yes
-
-  handlers:
-    - name: Reload sysctl
-      command: sysctl --system
-      become: true
-
-# ---------------------------------------------------
-- name: Initialiser le master
-  hosts: master
-  become: true
-  tasks:
-    - name: kubeadm init
-      command: >
-        kubeadm init
-        --pod-network-cidr={{ cluster_pod_cidr | default('10.244.0.0/16') }}
-        --ignore-preflight-errors=Swap
-      register: init_out
+        mkdir -p /etc/apt/keyrings
+        curl -fsSLo {{ kubernetes_apt_key_path }} https://packages.cloud.google.com/apt/doc/apt-key.gpg
       args:
-        creates: /etc/kubernetes/admin.conf
+        creates: "{{ kubernetes_apt_key_path }}"
 
-    - name: Copier le kubeconfig pour l’utilisateur
-      become_user: "{{ ansible_user }}"
-      shell: |
-        mkdir -p $HOME/.kube
-        sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
-        sudo chown $(id -u):$(id -g) $HOME/.kube/config
+    - name: Ajouter le dépôt APT Kubernetes (avec signed-by)
+      copy:
+        dest: "{{ kubernetes_apt_list_path }}"
+        content: |
+          deb [signed-by={{ kubernetes_apt_key_path }}] https://apt.kubernetes.io/ kubernetes-xenial main
+        mode: '0644'
 
-    - name: Capturer la commande join
-      set_fact:
-        join_cmd: "{{ init_out.stdout_lines | select('search','kubeadm join') | list | first | trim }} --ignore-preflight-errors=Swap"
-
-# ---------------------------------------------------
-- name: Joindre les workers
-  hosts: workers
-  become: true
-  tasks:
-    - name: Exécuter kubeadm join
-      command: "{{ hostvars[groups['master'][0]].join_cmd }}"
-      when: hostvars[groups['master'][0]].join_cmd is defined
-
-# ---------------------------------------------------
-- name: Installer Flannel (CNI) depuis le master
-  hosts: master
-  become: true
-  tasks:
-    - command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
-      args: { executable: /bin/bash }
-
-# ---------------------------------------------------
-- name: Installer Helm + Ingress + cert-manager + ArgoCD
-  hosts: master
-  become: true
-  tasks:
-    - name: Installer Helm
-      shell: curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
-      args: { executable: /bin/bash }
-
-    - name: Ajouter dépôts Helm
-      shell: |
-        helm repo add jetstack https://charts.jetstack.io
-        helm repo add argo https://argoproj.github.io/argo-helm
-        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-        helm repo update
-      args: { executable: /bin/bash }
-
-    - name: Ingress NGINX
-      shell: |
-        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-          --namespace ingress-nginx --create-namespace \
-          --set controller.service.type=LoadBalancer
-      args: { executable: /bin/bash }
-
-    - name: cert-manager
-      shell: |
-        helm upgrade --install cert-manager jetstack/cert-manager \
-          --namespace cert-manager --create-namespace --set installCRDs=true
-      args: { executable: /bin/bash }
-
-    - name: ArgoCD
-      shell: |
-        helm upgrade --install argocd argo/argo-cd \
-          --namespace argocd --create-namespace
-      args: { executable: /bin/bash }
+    - name: Mise à jour du cache APT (après configuration complète)
+      apt:
+        update_cache: yes

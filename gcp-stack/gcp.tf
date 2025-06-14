@@ -90,14 +90,14 @@ resource "google_compute_firewall" "allow_ssh" {
 
 # --- Instances Ubuntu (nodes Kubernetes) ---
 resource "google_compute_instance" "k8s_nodes" {
-  count        = 2
+  count        = 3
   name         = "k8s-node-${count.index + 1}"
   machine_type = "e2-medium"
   zone         = var.zone
 
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      image = "ubuntu-2404-lts"
       size  = 20
     }
   }
@@ -141,8 +141,16 @@ resource "null_resource" "provision_k8s" {
 
   provisioner "local-exec" {
     command = <<EOT
-      echo "[INFO] Nettoyage des anciennes clés SSH connues..."
+      echo "[INFO] Attente que les ports SSH soient disponibles..."
 
+      for ip in $(awk '/ansible_host=/ {for(i=1;i<=NF;i++) if ($i ~ /^ansible_host=/) {split($i,a,"="); print a[2]}}' inventory.ini); do
+        echo "[WAIT] Vérification SSH pour $ip ..."
+        while ! nc -z -w3 $ip 22; do
+          sleep 15
+        done
+      done
+
+      echo "[INFO] Nettoyage des anciennes clés SSH connues..."
       for ip in $(awk '/ansible_host=/ {for(i=1;i<=NF;i++) if ($i ~ /^ansible_host=/) {split($i,a,"="); print a[2]}}' inventory.ini); do
         ssh-keygen -f "$HOME/.ssh/known_hosts" -R "$ip" || true
       done
@@ -155,5 +163,6 @@ resource "null_resource" "provision_k8s" {
         -u ${var.ssh_user}
     EOT
     interpreter = ["/bin/bash", "-c"]
+
   }
 }
