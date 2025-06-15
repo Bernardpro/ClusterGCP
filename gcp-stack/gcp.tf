@@ -162,7 +162,7 @@ resource "null_resource" "provision_k8s" {
   provisioner "local-exec" {
     command = <<EOT
       echo "[INFO] Attente que les ports SSH soient disponibles..."
-      sleep 15
+      sleep 30
 
       echo "[INFO] Nettoyage des anciennes clés SSH connues..."
       for ip in $(awk '/ansible_host=/ {for(i=1;i<=NF;i++) if ($i ~ /^ansible_host=/) {split($i,a,"="); print a[2]}}' inventory.ini); do
@@ -183,9 +183,9 @@ resource "null_resource" "provision_k8s" {
   provisioner "local-exec" {
     command = <<EOT
     
-      echo "[INFO] Lancement du playbook Ansible change hostname..."
+      echo "[INFO] Lancement du playbook Ansible change network configuration..."
       ANSIBLE_HOST_KEY_CHECKING=False \
-      uv run ansible-playbook ./ansible/update-hosts.yml \
+      uv run ansible-playbook ./ansible/update-network.yml \
         -i inventory.ini \
         --private-key=${var.private_key_path} \
         -u ${var.ssh_user}
@@ -195,9 +195,9 @@ resource "null_resource" "provision_k8s" {
   }
   provisioner "local-exec" {
     command = <<EOT
-      echo "[INFO] Lancement du playbook Ansible provisionnement Kubernetes..."
+      echo "[INFO] Lancement du playbook Ansible d'installation de Kubernetes..."
       ANSIBLE_HOST_KEY_CHECKING=False \
-      uv run ansible-playbook ./ansible/provision-k8s.yml \
+      uv run ansible-playbook ./ansible/install-kubernetes.yml \
         -i inventory.ini \
         --private-key=${var.private_key_path} \
         -u ${var.ssh_user}
@@ -205,4 +205,18 @@ resource "null_resource" "provision_k8s" {
     interpreter = ["/bin/bash", "-c"]
 
   }
+
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "[INFO] Initialisation du cluster Kubernetes..."
+      ANSIBLE_HOST_KEY_CHECKING=False \
+      uv run ansible-playbook ./ansible/init-cluster.yml \
+        -i inventory.ini \
+        --private-key=${var.private_key_path} \
+        -u ${var.ssh_user}
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+
+  }
+
 }

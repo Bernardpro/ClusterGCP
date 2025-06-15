@@ -1,0 +1,55 @@
+---
+# playbook 4: init-cluster.yml 
+- name: Initialiser le master Kubernetes
+  hosts: master
+  become: true
+  tasks:
+    - name: Initialiser le cluster avec kubeadm
+      command: kubeadm init --apiserver-advertise-address={{ ansible_default_ipv4.address }} --pod-network-cidr=10.244.0.0/16
+      register: kubeadm_output
+      ignore_errors: true
+
+    - name: Sauvegarder la sortie de kubeadm
+      copy:
+        content: "{{ kubeadm_output.stdout }}"
+        dest: /tmp/kubeadm-init.log
+
+    - name: Créer le répertoire .kube
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Copier la config kube
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        remote_src: yes
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Générer un nouveau token kubeadm
+      command: kubeadm token create
+      register: kubeadm_token
+
+    - name: Générer le hash CA pour kubeadm join et assembler la commande complète
+      shell: |
+        HASH=$(openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | \
+          openssl rsa -pubin -outform der 2>/dev/null | \
+          sha256sum | awk '{print $1}')
+        echo "kubeadm join master:6443 --token {{ kubeadm_token.stdout }} --discovery-token-ca-cert-hash sha256:$HASH" > /tmp/kubeadm_join_cmd.sh
+      args:
+        executable: /bin/bash
+
+    - name: Lire la commande join depuis le master
+      slurp:
+        src: /tmp/kubeadm_join_cmd.sh
+      register: join_command_raw
+
+    - name: Définir le join command pour les workers
+      set_fact:
+        join_command: "{{ join_command_raw.content | b64decode | trim }}"
+        cacheable: true

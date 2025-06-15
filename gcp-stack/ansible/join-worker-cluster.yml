@@ -1,0 +1,15 @@
+---
+# Jointer le cluster Kubernetes depuis les workers
+- name: Rejoindre le cluster Kubernetes depuis les workers
+  hosts: worker
+  become: true
+  tasks:
+    - name: Récupérer la commande join depuis le master
+      set_fact:
+        kube_join_cmd: "{{ hostvars[groups['master'][0]]['join_command'] }}"
+
+
+    - name: Exécuter kubeadm join si non déjà membre du cluster
+      command: "{{ kube_join_cmd }}"
+      args:
+        creates: /etc/kubernetes/kubelet.conf

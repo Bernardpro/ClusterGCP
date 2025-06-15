@@ -1,0 +1,68 @@
+---
+- name: Installer Kubernetes v1.33 (Ubuntu 24.04)
+  hosts: all
+  become: true
+
+  vars:
+    kube_keyring_path: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    kube_repo_path: /etc/apt/sources.list.d/kubernetes.list
+
+  tasks:
+    - name: Mettre à jour les paquets APT
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+
+    - name: Créer le répertoire keyrings s'il n'existe pas
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Télécharger et convertir la clé GPG de Kubernetes
+      get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v1.33/deb/Release.key
+        dest: /tmp/k8s-release.key
+        mode: '0644'
+
+    - name: Convertir la clé en format GPG binaire
+      command: >
+        gpg --dearmor -o {{ kube_keyring_path }} /tmp/k8s-release.key
+      args:
+        creates: "{{ kube_keyring_path }}"
+
+    - name: Ajouter le dépôt APT Kubernetes
+      copy:
+        dest: "{{ kube_repo_path }}"
+        content: |
+          deb [signed-by={{ kube_keyring_path }}] https://pkgs.k8s.io/core:/stable:/v1.33/deb/ /
+        mode: '0644'
+
+    - name: Mise à jour du cache APT après ajout du dépôt
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+
+    - name: Installer kubeadm, kubelet, kubectl
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+        force_apt_get: yes
+
+    - name: Geler les versions de kubelet, kubeadm, kubectl
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+    - name: Activer et démarrer le service kubelet
+      systemd:
+        name: kubelet
+        enabled: yes
+        state: started

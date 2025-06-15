@@ -1,0 +1,11 @@
+---
+# Initialiser le réseau CNI avec Flannel
+- name: Installer Flannel CNI sur le master
+  hosts: master
+  become: true
+  tasks:
+    - name: Appliquer le manifest Flannel CNI
+      shell: |
+        kubectl apply -f https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf

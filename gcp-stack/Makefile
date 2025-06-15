@@ -1,9 +1,9 @@
 build:
-	terraform init && terraform plan && terraform apply
-restart:
-	terraform apply 
+	terraform init && terraform plan && terraform apply -auto-approve
+start:
+	terraform apply -auto-approve
 destroy:
-	terraform destroy
+	terraform destroy -auto-approve
 
 unbuild:
-	terraform destroy && rm -rf .terraform && rm .terraform.lock.hcl && rm terraform.tfstate && rm terraform.tfstate.backup
+	terraform destroy -auto-approve && rm -rf .terraform && rm .terraform.lock.hcl && rm terraform.tfstate && rm terraform.tfstate.backup

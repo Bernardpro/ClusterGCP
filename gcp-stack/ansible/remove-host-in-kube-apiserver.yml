@@ -1,0 +1,28 @@
+---
+- name: Initialiser le master Kubernetes
+  hosts: master
+  become: true
+
+  handlers:
+    - name: Redémarrer kubelet
+      ansible.builtin.systemd:
+        name: kubelet
+        state: restarted
+        enabled: true
+
+  tasks:
+    - name: Supprimer les lignes host des probes dans kube-apiserver.yaml
+      ansible.builtin.replace:
+        path: /etc/kubernetes/manifests/kube-apiserver.yaml
+        regexp: '^\s*host:\s*.*$'
+        replace: ''
+      notify: Redémarrer kubelet
+
+    - name: Attendre que le kube-apiserver redémarre et devienne disponible
+      ansible.builtin.wait_for:
+        port: 6443
+        host: 127.0.0.1
+        timeout: 60
+        state: started
+      when: ansible_hostname == 'k8s-node-1'
+
