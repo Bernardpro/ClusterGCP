@@ -1,11 +1,29 @@
 ---
-# playbook 4: init-cluster.yml 
-- name: Initialiser le master Kubernetes
+# playbook 4: init-master.yml 
+- name: Initialiser le master Kubernetes with kubeadm
   hosts: master
   become: true
   tasks:
+    - name: Désactiver le swap immédiatement
+      ansible.builtin.command: swapoff -a
+      become: true
+
+    - name: Commenter la ligne de swap dans /etc/fstab pour désactivation permanente
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^(\s*[^#]\S+\s+\S+\s+swap\s+\S+\s+\S+\s+\S+)'
+        replace: '# \1'
+      
+
+    - name: Créer kubeadm.config avec IP privée du master
+      ansible.builtin.template:
+        src: ./template/kubeadm.config.j2
+        dest: /home/ubuntu/kubeadm.config
+        mode: '0644'
+
+
     - name: Initialiser le cluster avec kubeadm
-      command: kubeadm init --apiserver-advertise-address={{ ansible_default_ipv4.address }} --pod-network-cidr=10.244.0.0/16
+      command: sudo kubeadm init --config=/home/ubuntu/kubeadm.config
       register: kubeadm_output
       ignore_errors: true
 

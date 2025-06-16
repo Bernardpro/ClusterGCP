@@ -1,0 +1,33 @@
+---
+# Initialiser le réseau CNI avec Calico
+- name: Installer Calico CNI sur le master
+  hosts: master
+  become: true
+  tasks:
+    - name: Appliquer les paramètres sysctl pour Kubernetes
+      shell: | 
+        kubectl config set-cluster kubernetes --server=https://10.0.1.2:6443
+    - name: Créer le répertoire .kube
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Copier la config kube
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        remote_src: yes
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+    - name: Appliquer le manifest Calico CNI
+      shell: |
+        sudo systemctl restart kubelet
+    - name: Appliquer le manifest Calico CNI
+      shell: |
+        kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf

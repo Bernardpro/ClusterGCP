@@ -60,6 +60,20 @@
         - kubelet
         - kubeadm
         - kubectl
+    - name: Remplacer le contenu de /etc/default/kubelet
+      become: true
+      ansible.builtin.copy:
+        content: "KUBELET_EXTRA_ARGS=--node-ip={{ ansible_default_ipv4.address }}\n"
+        dest: /etc/default/kubelet
+        owner: root
+        group: root
+        mode: '0644'
+        
+    - name: Installer nano
+      ansible.builtin.package:
+        name: nano
+        state: present
+
 
     - name: Activer et démarrer le service kubelet
       systemd:
