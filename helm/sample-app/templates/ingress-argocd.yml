@@ -9,7 +9,7 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
-  ingressClassName: nginx  
+  ingressClassName: argocd  
   tls:
     - hosts:
         - {{ .Values.ingressArgocd.host }}

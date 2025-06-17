@@ -1,11 +1,11 @@
-- name: Installer containerd sur les nœuds Kubernetes
+- name: Installer containerd avec configuration optimisée sur les nœuds Kubernetes
   hosts: k8s
   become: true
 
   tasks:
-    - name: Mettre à jour le cache APT initial
+    - name: Mettre à jour le cache APT
       apt:
-        update_cache: yes
+        update_cache: true
 
     - name: Installer les paquets nécessaires
       apt:
@@ -15,19 +15,35 @@
           - curl
           - gpg
         state: present
-        
+
     - name: Installer containerd
       apt:
         name: containerd
         state: present
 
-    - name: Créer un fichier de configuration containerd si nécessaire
-      command: containerd config default > /etc/containerd/config.toml
-      args:
-        creates: /etc/containerd/config.toml
+    - name: Créer le répertoire de configuration containerd
+      file:
+        path: /etc/containerd
+        state: directory
+        mode: '0755'
 
+    - name: Générer la configuration par défaut de containerd
+      command: containerd config default
+      register: containerd_config
+      changed_when: false
+
+    - name: Appliquer la configuration optimisée containerd
+      copy:
+        dest: /etc/containerd/config.toml
+        content: |
+          {{ containerd_config.stdout | replace('sandbox_image = "registry.k8s.io/pause:3.8"', 'sandbox_image = "registry.k8s.io/pause:3.10"') | replace('SystemdCgroup = false', 'SystemdCgroup = true') }}
+      notify: Redémarrer containerd
+
+  handlers:
     - name: Redémarrer containerd
       systemd:
         name: containerd
+        daemon_reload: true
         state: restarted
-        enabled: yes
+        enabled: true
+

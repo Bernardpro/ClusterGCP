@@ -52,16 +52,6 @@ locals {
   subnet_id = var.create_subnet ? google_compute_subnetwork.private[0].id : data.google_compute_subnetwork.private[0].id
 }
 
-# --- IPs Statique pour services externes ---
-resource "google_compute_address" "ingress_static" {
-  name   = "ingress-static-ip"
-  region = var.region
-}
-
-resource "google_compute_address" "argocd_static_ip" {
-  name   = "argocd-static-ip"
-  region = var.region
-}
 
 # --- Disque Persitant MySQL protégé ---
 resource "google_compute_disk" "mysql_data" {
@@ -151,6 +141,20 @@ resource "null_resource" "generate_inventory" {
     command = "echo '${data.template_file.inventory.rendered}' > inventory.ini"
   }
 }
+# resource "null_resource" "argocd_app" {
+#   provisioner "local-exec" {
+#     command = <<EOT
+#       echo '${templatefile("${path.module}/argocd_app.yaml.tmpl", {
+#         github_user    = var.github_user,
+#         github_repo    = var.github_repo,
+#         app_path       = var.app_path,
+#         github_token   = var.github_token,
+#         environnement  = var.environnement,
+#         app_namespace  = var.app_namespace
+#       })}' > /tmp/argocd_app.yaml
+# EOT
+#   }
+# }
 
 # --- Provisionnement du cluster avec Ansible ---
 resource "null_resource" "provision_k8s" {

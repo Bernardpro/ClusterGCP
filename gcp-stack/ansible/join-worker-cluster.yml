@@ -10,6 +10,6 @@
 
 
     - name: Exécuter kubeadm join si non déjà membre du cluster
-      command: "sleep 30 && {{ kube_join_cmd }}"
+      command: "{{ kube_join_cmd }}"
       args:
         creates: /etc/kubernetes/kubelet.conf

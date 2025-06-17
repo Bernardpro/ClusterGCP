@@ -90,3 +90,17 @@ variable "private_key_path" {
   type        = string
   default     = "credentials/ssh-key"
 }
+
+variable "argocd_static_ip" {
+  description = "Adresse IP publique assignée à ArgoCD"
+  type        = string
+}
+
+variable "ingress_static_ip" {
+  description = "Adresse IP publique assignée à l'Ingress NGINX"
+  type        = string
+}
+variable "grafana_static_ip" {
+  description = "Adresse IP publique assignée à Grafana"
+  type        = string
+}

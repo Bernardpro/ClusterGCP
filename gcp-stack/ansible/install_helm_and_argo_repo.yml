@@ -1,0 +1,29 @@
+- name: Installer Helm et ajouter le dépôt ArgoCD
+  hosts: master
+  become: true
+  tasks:
+
+    - name: Installer les dépendances système
+      apt:
+        name: curl
+        state: present
+        update_cache: true
+
+    - name: Télécharger et installer Helm
+      shell: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      args:
+        executable: /bin/bash
+      register: helm_install_result
+
+    - name: Vérifier que Helm est installé
+      command: helm version
+      register: helm_version
+      changed_when: false
+
+    - name: Ajouter le repo Helm ArgoCD
+      command: helm repo add argo https://argoproj.github.io/argo-helm
+      register: argo_repo
+      changed_when: "'has been added' in argo_repo.stdout"
+
+    - name: Mettre à jour les dépôts Helm
+      command: helm repo update

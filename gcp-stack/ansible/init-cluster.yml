@@ -1,6 +1,7 @@
 ---
 - import_playbook: init-master.yml
 # - import_playbook: remove-host-in-kube-apiserver.yml
-# - import_playbook: install-cni-calico.yml
-# - import_playbook: join-worker-cluster.yml
+- import_playbook: join-worker-cluster.yml
+- import_playbook: install-cni-calico.yml
+# 
 
