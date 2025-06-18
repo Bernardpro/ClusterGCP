@@ -1,0 +1,30 @@
+{{- if .Values.dashboard.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.dashboard.serviceName }}-ingress
+  namespace: {{ .Values.dashboard.namespace }}
+  labels:
+    {{- toYaml .Values.dashboard.labels | nindent 4 }}
+  annotations:
+    kubernetes.io/ingress.class: "{{ .Values.dashboard.ingress.className }}"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+spec:
+  rules:
+    - host: {{ .Values.dashboard.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.dashboard.serviceName }}
+                port:
+                  number: 443
+  {{- if .Values.dashboard.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.dashboard.ingress.host }}
+      secretName: {{ .Values.dashboard.ingress.tls.secretName }}
+  {{- end }}
+{{- end }}

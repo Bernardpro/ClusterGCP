@@ -1,0 +1,19 @@
+- name: Installer Kubernetes Dashboard via Helm
+  hosts: master
+  become: true
+  tasks:
+
+    - name: Ajouter le dépôt Helm Kubernetes Dashboard
+      shell: |
+        helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+        helm repo update
+      args:
+        executable: /bin/bash
+
+    - name: Installer ou mettre à jour Kubernetes Dashboard
+      shell: |
+        helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+          --create-namespace \
+          --namespace kubernetes-dashboard
+      args:
+        executable: /bin/bash

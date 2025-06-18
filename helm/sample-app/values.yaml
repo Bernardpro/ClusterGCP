@@ -64,5 +64,23 @@ cert:
   issuer: letsencrypt-prod
   dnsName: argocd.spectrum-app.cloud
 
+  
+dashboard:
+  namespace: kubernetes-dashboard
+  serviceName: kubernetes-dashboard
+
+  ingress:
+    enabled: true
+    host: dashboard.spectrum-app.cloud
+    className: argocd
+    tls:
+      enabled: true
+      secretName: kubernetes-dashboard-cert
+      issuerName: letsencrypt-prod
+
+  labels:
+    app: kubernetes-dashboard
+
+
 
 
