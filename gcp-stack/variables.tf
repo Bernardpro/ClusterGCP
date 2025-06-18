@@ -66,3 +66,41 @@ variable "environnement" {
   type        = string
   default     = "dev"
 }
+
+variable "ssh_user" {
+  description = "SSH user for the instances"
+  type        = string
+  default     = "ubuntu"
+}
+
+variable "ssh_key_path" {
+  description = "Path to the SSH private key"
+  type        = string
+  default     = "credentials/ssh-key"
+}
+
+variable "public_key_path" {
+  description = "Path to the SSH public key"
+  type        = string
+  default     = "credentials/ssh-key.pub"
+}
+
+variable "private_key_path" {
+  description = "Path to the SSH public key"
+  type        = string
+  default     = "credentials/ssh-key"
+}
+
+variable "argocd_static_ip" {
+  description = "Adresse IP publique assignée à ArgoCD"
+  type        = string
+}
+
+variable "ingress_static_ip" {
+  description = "Adresse IP publique assignée à l'Ingress NGINX"
+  type        = string
+}
+variable "grafana_static_ip" {
+  description = "Adresse IP publique assignée à Grafana"
+  type        = string
+}

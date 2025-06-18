@@ -11,6 +11,7 @@ metadata:
     cert-manager.io/cluster-issuer: "{{ .Values.certManager.issuerName }}"
     {{- end }}
 spec:
+  ingressClassName: apps
 {{- if .Values.ingress.enableTLS }}
   tls:
     - hosts:

@@ -1,0 +1,38 @@
+- name: Deploy multiple ingress controllers with Helm
+  hosts: master
+  become: true
+  vars:
+    ingress_controllers:
+      - name: ingress-argocd
+        namespace: ingress-argocd
+        class: argocd
+        ip: "35.240.104.191"
+      - name: ingress-apps
+        namespace: ingress-apps
+        class: apps
+        ip: "35.187.18.7"
+
+  tasks:
+
+    - name: Add ingress-nginx Helm repo
+      community.kubernetes.helm_repository:
+        name: ingress-nginx
+        repo_url: https://kubernetes.github.io/ingress-nginx
+
+    - name: Deploy each ingress controller
+      community.kubernetes.helm:
+        name: "{{ item.name }}"
+        chart_ref: ingress-nginx/ingress-nginx
+        release_namespace: "{{ item.namespace }}"
+        create_namespace: true
+        kubeconfig: /etc/kubernetes/admin.conf
+        values:
+          controller:
+            ingressClassResource:
+              name: "{{ item.class }}"
+            ingressClass: "{{ item.class }}"
+            service:
+              loadBalancerIP: "{{ item.ip }}"
+              annotations:
+                cloud.google.com/load-balancer-type: External
+      loop: "{{ ingress_controllers }}"

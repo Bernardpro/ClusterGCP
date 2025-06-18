@@ -9,8 +9,28 @@
 | Terraform | ≥ 1.6 .x | <https://developer.hashicorp.com/terraform/downloads> |
 | Google Cloud SDK (`gcloud`) | ≥ 482 .x | <https://cloud.google.com/sdk/docs/install> |
 | A GCP project with billing enabled | — | Create via `gcloud projects create ...` |
+| Install uv | ≥ 0.6.3 | <https://docs.astral.sh/uv/getting-started/installation> via `uv venv` |
+| Init python dependencies | — | Init via `uv venv` |
 
-You also need a **service-account JSON key** with at least the `Editor` and `Storage Admin` roles (storage role is optional unless you add a remote backend).
+
+
+You also need a **service-account JSON key** with at least the `Editor`, `Cloud Tunnel API` and `Storage Admin` roles (storage role is optional unless you add a remote backend).
+
+Recommandations :
+Download your json key credentials file with the path : /gcp-stack/credentials/terraform-sa.json
+
+In last run the commands below for ssh :
+
+```
+ssh-keygen -t rsa -b 4096 -f /gcp-stack/credentials/ssh-key
+```
+
+```
+gcloud auth login
+gcloud compute project-info add-metadata --project=YOUR_PROJECT_ID \
+  --metadata-from-file ssh-keys=gcp-stack/credentials/ssh-key.pub
+```
+
 
 ---
 
@@ -20,7 +40,7 @@ You also need a **service-account JSON key** with at least the `Editor` and `Sto
 gcp-stack/
 ├── gcp.tf          # Main code
 ├── variables.tf     # Input variables
-├── terraform.tfvars # Variables values
+├── terraform.tfvars # Variables values (Update it for your configuration) 
 ├── outputs.tf       # The ouput of terraform
 
 ```
@@ -29,28 +49,25 @@ gcp-stack/
 
 ```
 cd gcp-stack
+uv venv
+uv run ansible-galaxy collection install community.kubernetes
+terraform init
+terraform plan
 terraform apply
 ```
-
-For init argocd you need to run the command bellow :
-```
-gcloud login
-gcloud container clusters get-credentials php-cluster   --region europe-west1-b   --project project_id
-```
-
 
 ## 4. Stop stack for economics usage
 
 ```
 cd gcp-stack
-terraform destroy -target=google_container_node_pool.nodes
+terraform destroy 
 ```
 
 ## 5. Restart after stop
 
 ```
 cd gcp-stack
-terraform apply -target=google_container_node_pool.nodes
+terraform apply 
 ```
 
 ## 6. Fecth the credentials for argocd :

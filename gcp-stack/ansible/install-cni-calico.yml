@@ -1,0 +1,38 @@
+- name: Installer Calico CNI sur le master
+  hosts: master
+  become: true
+
+  tasks:
+    - name: Labelliser les nœuds Kubernetes
+      shell: |
+        kubectl label node k8s-node-1 node-role.kubernetes.io/ingress= --overwrite
+        kubectl label node k8s-node-2 node-role.kubernetes.io/worker= --overwrite
+        kubectl label node k8s-node-2 node-role.kubernetes.io/ingress= --overwrite
+        kubectl label node k8s-node-3 node-role.kubernetes.io/worker= --overwrite
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+    - name: Appliquer le manifest corrigé
+      shell: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/tigera-operator.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+    - name: Télécharger le manifeste des ressources personnalisées Calico
+      shell: |
+        sleep 10 
+        curl https://raw.githubusercontent.com/projectcalico/calico/v3.29.1/manifests/custom-resources.yaml -O
+        sed -i 's/192.168.0.0/10.244.0.0/' custom-resources.yaml
+        kubectl apply  -f custom-resources.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+    - name: Installer le serveur de métriques Kubernetes
+      shell: |
+        kubectl apply -f https://raw.githubusercontent.com/techiescamp/cka-certification-guide/refs/heads/main/lab-setup/manifests/metrics-server/metrics-server.yaml
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+
+    - name: Autoriser le nœud master à accueillir des pods
+      shell: |
+        kubectl taint nodes k8s-node-1 node-role.kubernetes.io/control-plane:NoSchedule-
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf

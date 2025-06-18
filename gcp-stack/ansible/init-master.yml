@@ -1,0 +1,73 @@
+---
+# playbook 4: init-master.yml 
+- name: Initialiser le master Kubernetes with kubeadm
+  hosts: master
+  become: true
+  tasks:
+    - name: Désactiver le swap immédiatement
+      ansible.builtin.command: swapoff -a
+      become: true
+
+    - name: Commenter la ligne de swap dans /etc/fstab pour désactivation permanente
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^(\s*[^#]\S+\s+\S+\s+swap\s+\S+\s+\S+\s+\S+)'
+        replace: '# \1'
+      
+
+    - name: Créer kubeadm.config avec IP privée du master
+      ansible.builtin.template:
+        src: ../template/kubeadm.config.j2
+        dest: /home/ubuntu/kubeadm.config
+        mode: '0644'
+
+
+    - name: Initialiser le cluster avec kubeadm
+      command: sudo kubeadm init --config=/home/ubuntu/kubeadm.config
+      register: kubeadm_output
+      ignore_errors: true
+
+    - name: Sauvegarder la sortie de kubeadm
+      copy:
+        content: "{{ kubeadm_output.stdout }}"
+        dest: /tmp/kubeadm-init.log
+
+    - name: Créer le répertoire .kube
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Copier la config kube
+      copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /home/ubuntu/.kube/config
+        remote_src: yes
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Générer un nouveau token kubeadm
+      command: kubeadm token create
+      register: kubeadm_token
+
+    - name: Générer le hash CA pour kubeadm join et assembler la commande complète
+      shell: |
+        HASH=$(openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | \
+          openssl rsa -pubin -outform der 2>/dev/null | \
+          sha256sum | awk '{print $1}')
+        echo "kubeadm join {{ ansible_default_ipv4.address }}:6443 --token {{ kubeadm_token.stdout }} --discovery-token-ca-cert-hash sha256:$HASH" > /tmp/kubeadm_join_cmd.sh
+      args:
+        executable: /bin/bash
+
+    - name: Lire la commande join depuis le master
+      slurp:
+        src: /tmp/kubeadm_join_cmd.sh
+      register: join_command_raw
+
+    - name: Définir le join command pour les workers
+      set_fact:
+        join_command: "{{ join_command_raw.content | b64decode | trim }}"
+        cacheable: true

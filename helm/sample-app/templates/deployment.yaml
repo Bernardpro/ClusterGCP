@@ -40,5 +40,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Chart.Name }}-secret
                   key: db-password
+          command: ["php artisan migrate"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
