@@ -31,27 +31,4 @@
       args:
         executable: /bin/bash
 
-    - name: Créer le ClusterIssuer Let's Encrypt
-      copy:
-        dest: /tmp/letsencrypt-clusterissuer.yaml
-        content: |
-          apiVersion: cert-manager.io/v1
-          kind: ClusterIssuer
-          metadata:
-            name: letsencrypt-prod
-          spec:
-            acme:
-              email: ber.maxime.paul@gmail.com
-              server: https://acme-v02.api.letsencrypt.org/directory
-              privateKeySecretRef:
-                name: letsencrypt-prod
-              solvers:
-                - http01:
-                    ingress:
-                      class: nginx
-
-    - name: Appliquer le ClusterIssuer
-      shell: |
-        kubectl apply -f /tmp/letsencrypt-clusterissuer.yaml --kubeconfig=/etc/kubernetes/admin.conf
-      args:
-        executable: /bin/bash
+    
