@@ -6,7 +6,7 @@ metadata:
 spec:
   secretName: sample-app-cert
   issuerRef:
-    name: letsencrypt-prod
+    name: {{ .Values.cert.issuer }}
     kind: ClusterIssuer
   dnsNames:
     - sample-app.spectrum-app.cloud
