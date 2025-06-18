@@ -1,6 +1,6 @@
 ---
 - import_playbook: install_helm_and_argo_repo.yml
-- import_playbook: deploy_ingress_controllers.yml
+# - import_playbook: deploy_ingress_controllers.yml
 - import_playbook: install-certmanager-letsencrypt.yml
 - import_playbook: install_kube_dashbord.yml
 - import_playbook: deploy_argocd_app.yml

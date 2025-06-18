@@ -33,8 +33,5 @@
               default: false
             ingressClass: "{{ item.class }}"
             service:
-              annotations:
-                cloud.google.com/load-balancer-type: "External"
-                cloud.google.com/load-balancer-ipv4: "{{ item.ip }}"
               loadBalancerIP: "{{ item.ip }}"
       loop: "{{ ingress_controllers }}"
