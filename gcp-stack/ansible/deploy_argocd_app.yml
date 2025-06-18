@@ -2,6 +2,17 @@
   hosts: master
   become: true
   tasks:
+    - name: Créer le namespace argocd
+      shell: |
+        kubectl create namespace argocd --kubeconfig=/etc/kubernetes/admin.conf || true
+      args:
+        executable: /bin/bash
+
+    - name: Installer ArgoCD dans le cluster
+      shell: |
+        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --kubeconfig=/etc/kubernetes/admin.conf
+      args:
+        executable: /bin/bash
     - name: Copier le fichier argocd_app.yaml généré par Terraform
       copy:
         src: /tmp/argocd_app.yaml
