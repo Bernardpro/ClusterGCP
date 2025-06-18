@@ -57,5 +57,12 @@ ingressArgocd:
   host: argocd.spectrum-app.cloud
   tlsSecretName: argocd-cert
 
+cert:
+  enabled: true
+  name: argocd-cert
+  secretName: argocd-cert
+  issuer: letsencrypt-prod
+  dnsName: argocd.spectrum-app.cloud
+
 
 
