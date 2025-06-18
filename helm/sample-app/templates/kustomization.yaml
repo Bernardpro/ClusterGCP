@@ -1,8 +1,8 @@
-resources:
-  - deployment.yaml
-  - service.yaml
-  - ingress.yaml
-  - secret.yaml
-  - mysql-deployment.yaml
-  - mysql-service.yaml
-  - mysql-pvc.yaml
+# resources:
+#   - deployment.yaml
+#   - service.yaml
+#   - ingress.yaml
+#   - secret.yaml
+#   - mysql-deployment.yaml
+#   - mysql-service.yaml
+#   - mysql-pvc.yaml
