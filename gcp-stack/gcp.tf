@@ -141,20 +141,20 @@ resource "null_resource" "generate_inventory" {
     command = "echo '${data.template_file.inventory.rendered}' > inventory.ini"
   }
 }
-# resource "null_resource" "argocd_app" {
-#   provisioner "local-exec" {
-#     command = <<EOT
-#       echo '${templatefile("${path.module}/argocd_app.yaml.tmpl", {
-#         github_user    = var.github_user,
-#         github_repo    = var.github_repo,
-#         app_path       = var.app_path,
-#         github_token   = var.github_token,
-#         environnement  = var.environnement,
-#         app_namespace  = var.app_namespace
-#       })}' > /tmp/argocd_app.yaml
-# EOT
-#   }
-# }
+resource "null_resource" "argocd_app" {
+  provisioner "local-exec" {
+    command = <<EOT
+      echo '${templatefile("${path.module}/template/argocd_app.yaml.tmpl", {
+        github_user    = var.github_user,
+        github_repo    = var.github_repo,
+        app_path       = var.app_path,
+        github_token   = var.github_token,
+        environnement  = var.environnement,
+        app_namespace  = var.app_namespace
+      })}' > /tmp/argocd_app.yaml
+EOT
+  }
+}
 
 # --- Provisionnement du cluster avec Ansible ---
 resource "null_resource" "provision_k8s" {
@@ -223,4 +223,28 @@ resource "null_resource" "provision_k8s" {
 
   }
 
+}
+
+
+resource "null_resource" "deploy_app" {
+  depends_on = [
+    google_compute_instance.k8s_nodes,
+    data.template_file.inventory,
+    null_resource.provision_k8s  
+  ]
+  
+  
+  provisioner "local-exec" {
+    command = <<EOT
+    
+      echo "[INFO] Lancement du playbook Ansible de déploiement de l'application..."
+      ANSIBLE_HOST_KEY_CHECKING=False \
+      uv run ansible-playbook ./ansible/deploy.yml \
+        -i inventory.ini \
+        --private-key=${var.private_key_path} \
+        -u ${var.ssh_user}
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+
+  }
 }

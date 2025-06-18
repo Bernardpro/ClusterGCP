@@ -30,6 +30,8 @@ gcloud auth login
 gcloud compute project-info add-metadata --project=YOUR_PROJECT_ID \
   --metadata-from-file ssh-keys=gcp-stack/credentials/ssh-key.pub
 ```
+
+
 ---
 
 ## 2. File Layout
@@ -47,6 +49,8 @@ gcp-stack/
 
 ```
 cd gcp-stack
+uv venv
+uv run ansible-galaxy collection install community.kubernetes
 terraform init
 terraform plan
 terraform apply
