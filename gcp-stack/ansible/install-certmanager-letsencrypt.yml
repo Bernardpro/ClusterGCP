@@ -1,0 +1,57 @@
+- name: Installer cert-manager et configurer Let's Encrypt
+  hosts: master
+  become: true
+  tasks:
+    - name: Créer le namespace cert-manager
+      shell: |
+        kubectl create namespace cert-manager --kubeconfig=/etc/kubernetes/admin.conf || true
+      args:
+        executable: /bin/bash
+
+    - name: Ajouter le dépôt Helm de jetstack
+      shell:  |
+        helm repo add jetstack https://charts.jetstack.io
+        helm repo update
+      args:
+        executable: /bin/bash
+
+    - name: Appliquer les CRDs de cert-manager
+      shell: |
+        kubectl apply --validate=false -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.crds.yaml --kubeconfig=/etc/kubernetes/admin.conf
+      args:
+        executable: /bin/bash
+
+    - name: Installer cert-manager via Helm
+      shell: |
+        helm install cert-manager jetstack/cert-manager \
+          --namespace cert-manager \
+          --version v1.14.4 \
+          --set installCRDs=false \
+          --kubeconfig /etc/kubernetes/admin.conf
+      args:
+        executable: /bin/bash
+
+    - name: Créer le ClusterIssuer Let's Encrypt
+      copy:
+        dest: /tmp/letsencrypt-clusterissuer.yaml
+        content: |
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: letsencrypt-prod
+          spec:
+            acme:
+              email: ber.maxime.paul@gmail.com
+              server: https://acme-v02.api.letsencrypt.org/directory
+              privateKeySecretRef:
+                name: letsencrypt-prod
+              solvers:
+                - http01:
+                    ingress:
+                      class: nginx
+
+    - name: Appliquer le ClusterIssuer
+      shell: |
+        kubectl apply -f /tmp/letsencrypt-clusterissuer.yaml --kubeconfig=/etc/kubernetes/admin.conf
+      args:
+        executable: /bin/bash

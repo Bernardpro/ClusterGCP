@@ -13,13 +13,12 @@
         ip: "35.187.18.7"
 
   tasks:
-
     - name: Add ingress-nginx Helm repo
       community.kubernetes.helm_repository:
         name: ingress-nginx
         repo_url: https://kubernetes.github.io/ingress-nginx
 
-    - name: Deploy each ingress controller
+    - name: Deploy each ingress controller with static IP
       community.kubernetes.helm:
         name: "{{ item.name }}"
         chart_ref: ingress-nginx/ingress-nginx
@@ -30,9 +29,12 @@
           controller:
             ingressClassResource:
               name: "{{ item.class }}"
+              enabled: true
+              default: false
             ingressClass: "{{ item.class }}"
             service:
-              loadBalancerIP: "{{ item.ip }}"
               annotations:
-                cloud.google.com/load-balancer-type: External
+                cloud.google.com/load-balancer-type: "External"
+                cloud.google.com/load-balancer-ipv4: "{{ item.ip }}"
+              loadBalancerIP: "{{ item.ip }}"
       loop: "{{ ingress_controllers }}"
