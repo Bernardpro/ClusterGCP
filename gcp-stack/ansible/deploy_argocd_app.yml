@@ -21,8 +21,9 @@
 
     - name: Appliquer la ressource ArgoCD Application
       shell: |
-        kubectl apply -f /tmp/argocd_app.yaml --kubeconfig=/etc/kubernetes/admin.conf
+        kubectl apply -f /tmp/argocd_app.yaml --kubeconfig=/etc/kubernetes/admin.conf 
       args:
         executable: /bin/bash
       environment:
         KUBECONFIG: /etc/kubernetes/admin.conf
+    

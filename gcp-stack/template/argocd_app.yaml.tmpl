@@ -4,7 +4,7 @@ metadata:
   name: sample-app
   namespace: argocd
 spec:
-  project: default
+  project: sample-app
   source:
     repoURL:  https://x-access-token:${github_token}@github.com/${github_user}/${github_repo}
     targetRevision: HEAD

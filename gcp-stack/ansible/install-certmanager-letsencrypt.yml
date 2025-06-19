@@ -4,6 +4,7 @@
   tasks:
     - name: Créer le namespace cert-manager
       shell: |
+
         kubectl create namespace cert-manager --kubeconfig=/etc/kubernetes/admin.conf || true
       args:
         executable: /bin/bash
