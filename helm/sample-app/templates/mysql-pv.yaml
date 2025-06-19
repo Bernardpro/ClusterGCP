@@ -7,9 +7,6 @@ spec:
     storage: 10Gi
   accessModes:
     - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  persistentVolumeSource:
-    gcePersistentDisk:
-      pdName: mysql-disk
-      fsType: ext4
+  hostPath:
+    path: /mnt/data/mysql
 
