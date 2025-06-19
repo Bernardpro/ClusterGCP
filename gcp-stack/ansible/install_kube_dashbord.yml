@@ -14,6 +14,16 @@
       shell: |
         helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
           --create-namespace \
-          --namespace kubernetes-dashboard
+          --namespace kubernetes-dashboard \
+          --kubeconfig /etc/kubernetes/admin.conf
       args:
         executable: /bin/bash
+    - name: Installer ou mettre à jour Kubernetes Dashboard
+      shell: |
+        kubectl create serviceaccount admin-user -n kubernetes-dashboard
+        kubectl create clusterrolebinding admin-user-binding \
+            --clusterrole=cluster-admin --serviceaccount=kubernetes-dashboard:admin-user
+      args:
+        executable: /bin/bash
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf

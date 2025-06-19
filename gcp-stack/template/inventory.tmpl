@@ -1,5 +1,5 @@
 [master]
-k8s-node-1 ansible_host=${master_public_ip} k8s_ip=${master_internal_ip}
+k8s-node-1 ansible_host=${master_public_ip} k8s_ip=${master_internal_ip} github_user=${github_user} github_token=${github_token}
 
 [worker]
 ${worker_block}

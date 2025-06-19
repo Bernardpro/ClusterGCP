@@ -129,6 +129,8 @@ data "template_file" "inventory" {
   vars = {
     master_public_ip    = google_compute_instance.k8s_nodes[0].network_interface[0].access_config[0].nat_ip
     master_internal_ip  = google_compute_instance.k8s_nodes[0].network_interface[0].network_ip
+    github_token       = var.github_token
+    github_user        = var.github_user_login
     worker_block = join("\n", [
       for idx in range(1, 3) : 
       "k8s-node-${idx + 1} ansible_host=${google_compute_instance.k8s_nodes[idx].network_interface[0].access_config[0].nat_ip} k8s_ip=${google_compute_instance.k8s_nodes[idx].network_interface[0].network_ip}"
@@ -247,4 +249,12 @@ resource "null_resource" "deploy_app" {
     interpreter = ["/bin/bash", "-c"]
 
   }
+
+  provisioner "local-exec" {
+    command = <<EOT
+      rm -f /tmp/argocd_app.yaml
+      rm -f inventory.ini
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+    }
 }

@@ -104,3 +104,8 @@ variable "grafana_static_ip" {
   description = "Adresse IP publique assignée à Grafana"
   type        = string
 }
+variable "github_user_login" {
+  description = "GitHub user for login"
+  type        = string
+  default     = "EpitechMscProPromo2025"
+}

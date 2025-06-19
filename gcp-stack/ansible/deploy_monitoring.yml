@@ -1,0 +1,31 @@
+- name: Installer Prometheus et Grafana via Helm
+  hosts: master
+  become: true
+  tasks:
+
+    - name: Ajouter le dépôt Helm Prometheus
+      shell: |
+        kubectl create namespace monitoring
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+        helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring
+
+      args:
+        executable: /bin/bash
+
+    - name: Installer Grafana Loki
+      shell: |
+        kubectl create namespace logging
+        helm repo add grafana https://grafana.github.io/helm-charts
+        helm install loki-stack grafana/loki-stack -n logging \
+          --set grafana.enabled=true \
+      args:
+        executable: /bin/bash
+    - name: Installer ou mettre à jour Kubernetes Dashboard
+      shell: |
+        kubectl create serviceaccount admin-user -n kubernetes-dashboard
+        kubectl create clusterrolebinding admin-user-binding \
+            --clusterrole=cluster-admin --serviceaccount=kubernetes-dashboard:admin-user
+      args:
+        executable: /bin/bash
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
