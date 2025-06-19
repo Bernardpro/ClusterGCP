@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -13,19 +15,29 @@ spec:
         app: {{ .Chart.Name }}
     spec:
       initContainers:
-      - name: run-migrations
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        command: ["php", "artisan", "migrate", "--force"]
-        env:  # répète les variables nécessaires
-          - name: DB_CONNECTION
-            value: "{{ .Values.env.DB_CONNECTION }}"
-        ...
-        envFrom:
-        - secretRef:
-            name: {{ .Chart.Name }}-secret
-      envFrom:
-        - secretRef:
-            name: {{ .Chart.Name }}-secret
+        - name: run-migrations
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["php", "artisan", "migrate", "--force"]
+          env:
+            - name: DB_CONNECTION
+              value: "{{ .Values.env.DB_CONNECTION }}"
+            - name: DB_HOST
+              value: "{{ .Values.env.DB_HOST }}"
+            - name: DB_PORT
+              value: "{{ .Values.env.DB_PORT }}"
+            - name: DB_DATABASE
+              value: "{{ .Values.env.DB_DATABASE }}"
+            - name: DB_USERNAME
+              value: "{{ .Values.env.DB_USERNAME }}"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Chart.Name }}-secret
+                  key: db-password
+          envFrom:
+            - secretRef:
+                name: {{ .Chart.Name }}-secret
+
       containers:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -54,6 +66,5 @@ spec:
                 secretKeyRef:
                   name: {{ .Chart.Name }}-secret
                   key: db-password
-          command: ["php artisan migrate"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
