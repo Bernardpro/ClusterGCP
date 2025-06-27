@@ -9,7 +9,7 @@ This project focuses on designing and deploying a fully-equipped Kubernetes clus
 ---
 ### Structure
 ```
-T-CLO-902-LYO_1/
+ClusterGCP/
 ├── sample-app/                     # Laravel application source code
 │   ├── app/
 │   ├── public/
