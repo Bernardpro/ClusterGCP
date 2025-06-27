@@ -1,7 +1,5 @@
 # Kubernetes Cluster Deployment Project
 
-# Mon Projet
-
 🔗 [Introduction](README.md) | [Installation](gcp-stack/README.md) 
 
 
